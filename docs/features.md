@@ -66,6 +66,24 @@ This document records the functionality implemented against `SystemScope_Standal
 - Create workshop actions and information requests with system, owner, due date, priority and status.
 - Dashboard highlights overdue actions.
 
+## Interactive landscape
+
+- Landscape view is the assessment workspace for the water management value chain (seeded as-is v5.0, April 2025).
+- Every box shows live status: not in scope, registered, in workshop, submitted, approved, High/Critical pins, information gaps and last-confirmed evidence.
+- In-scope systems stay full strength; one-hop neighbours are marked context / dependency.
+- Coverage heat colours boxes green / amber / red from mandatory answers or open High/Critical findings.
+- Multi-select systems and add them to a project from the map. Clusters (groundwater, monitoring, compliance, entitlements, public) start a shared scope and open workshop.
+- Connection lines are clickable and create an integration, finding or action on that interface.
+- Workshop Integration and Architecture questions show the assessed system and its landscape neighbours.
+- Boxes can be moved, systems added, links drawn, and regional / decommissioned flags set. Dated as-is / to-be versions persist through the API.
+- As-is, to-be and compare layers show keep / retire / replace / consolidate / add. Capability swimlanes group entitlements, compliance, groundwater, monitoring, spatial, operations, public channels and corporate.
+- Blast-radius view lists downstream dependents. Search isolates and centres. Filters isolate rather than greying the estate. Fit includes every shown box.
+- Export PNG of the current view and a printable in-scope pack of systems, interfaces and findings.
+- Focus mode isolates one or more relationship hops around the selected system, with a breadcrumb back to the full landscape.
+- System details panel covers Overview, Technology, Data, Assessment and Records, including owners, UI/API/database, hosting and identity.
+- HSI view projects the same estate by hosting (on-prem, Azure, SaaS, field, external) and identity provider, with hosting / identity / UI-tech filters.
+- Interface selection shows direction, data exchanged, method, frequency, owners and monitoring.
+
 ## Dashboard, search, audit and exports
 
 - Dashboard displays active projects, systems in scope, assessment coverage, unresolved High/Critical findings, overdue actions, information gaps and requirements generated.

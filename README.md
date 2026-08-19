@@ -4,6 +4,7 @@ SystemScope is a standalone technical landscape assessment application. A React 
 
 ## Included MVP
 
+- Interactive landscape assessment workspace (status, scope, heat, as-is/to-be, export)
 - Project and system registers
 - Versioned Oracle/web assessment template
 - Question-by-question Workshop Mode with confidence and status
