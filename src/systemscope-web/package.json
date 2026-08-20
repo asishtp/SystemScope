@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test": "tsx --test src/landscape/assessment.test.ts"
+    "test": "tsx --test src/landscape/assessment.test.ts src/market/scoring.test.ts"
   },
   "dependencies": {
     "react": "^19.2.8",

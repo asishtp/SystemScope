@@ -220,7 +220,7 @@ export const capabilityOf = (sys: CatalogRef): Capability => {
   const byId: Record<string, Capability> = {
     werd: 'entitlements', ats: 'entitlements', wms: 'entitlements', orc: 'entitlements',
     ciram: 'compliance', ccms: 'compliance', wicd: 'compliance', iauditor: 'compliance', cat6: 'compliance',
-    gwdb: 'groundwater', bls: 'groundwater', ogia: 'groundwater', wfieldapp: 'groundwater', 'gw-online': 'groundwater',
+    gwdb: 'groundwater', bls: 'groundwater', ogia: 'groundwater', wfieldapp: 'groundwater', 'gw-online': 'groundwater', aquis: 'groundwater',
     hydstra: 'monitoring', gauges: 'monitoring', wasp: 'monitoring', silo: 'monitoring', hcs: 'monitoring',
     'des-azure': 'monitoring', 'metering-internal': 'monitoring', 'metering-external': 'monitoring',
     'qspatial-live': 'spatial', sir: 'spatial', spin: 'spatial', survey123: 'spatial', geores: 'spatial', 'qd-globe': 'spatial', qspatial: 'spatial',
@@ -359,7 +359,7 @@ function rankConfidence(c: string) {
 }
 
 export const landscapeClusters = [
-  { id: 'groundwater', name: 'Groundwater', systemIds: ['gwdb', 'bls', 'ogia', 'wfieldapp', 'gw-online'] },
+  { id: 'groundwater', name: 'Groundwater', systemIds: ['gwdb', 'bls', 'ogia', 'wfieldapp', 'gw-online', 'aquis'] },
   { id: 'monitoring', name: 'Water monitoring', systemIds: ['hydstra', 'gauges', 'wasp', 'wmip', 'metering-internal', 'metering-external'] },
   { id: 'compliance', name: 'Compliance', systemIds: ['ciram', 'ccms', 'wicd', 'iauditor', 'cat6'] },
   { id: 'entitlements', name: 'Entitlements and titling', systemIds: ['werd', 'wms', 'ats', 'orc', 'wateriq'] },

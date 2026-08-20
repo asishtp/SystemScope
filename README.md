@@ -5,6 +5,8 @@ SystemScope is a standalone technical landscape assessment application. A React 
 ## Included MVP
 
 - Interactive landscape assessment workspace (status, scope, heat, as-is/to-be, export)
+- Market-scan assessment workspace with six domains, systems register, integration catalogue, gaps, validation, Word generation, document approval and publication
+- Seeded Water Monitoring Systems Market Scan 2026 including the AQUIS example (`#/assessments/aquis`, `#/documents/aquis`, `#/validate/aquis/request-1042`)
 - Project and system registers
 - Versioned Oracle/web assessment template
 - Question-by-question Workshop Mode with confidence and status

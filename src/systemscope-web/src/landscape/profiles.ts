@@ -77,6 +77,7 @@ const overrides: Partial<Record<string, Partial<SystemProfile>>> = {
   aqeis: { dataEntities: ['Aquatic ecosystem'] },
   'lims-qh': { hosting: 'external', identity: 'QH IdP', dataEntities: ['Health lab samples'] },
   wateriq: { ui: 'Angular', api: 'Azure App Service', hosting: 'azure', database: 'Azure SQL', identity: 'myID / ABR', deploy: 'Azure DevOps', dataEntities: ['Devices', 'Jobs', 'Allocations'] },
+  aquis: { ui: 'Oracle Forms', database: 'Oracle Database (inferred)', identity: 'To be confirmed', dataEntities: ['Operational water monitoring records'] },
   gwdb: { ui: 'Oracle Forms / GWPlot', database: 'Oracle 19c', dataEntities: ['Bores', 'Water levels', 'Drill logs'] },
   wfieldapp: { hosting: 'field', ui: 'Mobile', identity: 'App auth', dataEntities: ['GW sample metadata'] },
   wasp: { dataEntities: ['Water analysis samples'] },

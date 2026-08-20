@@ -99,12 +99,110 @@ This document records the functionality implemented against `SystemScope_Standal
 - Controls use labels, status regions, accessible dialog semantics and mobile-sized touch targets.
 - Register layouts provide horizontal scrolling where tabular content cannot reflow safely.
 
-## Remaining work before production acceptance
+## Market scan, system assessment and document generation
+
+Implemented against `SystemScope_Market_Scan_Requirements.md` (draft 1.0, 20 August 2026) and the approved AQUIS screen mockups. Status below is the working MVP as of 20 August 2026. Remaining polish against those screens is deferred.
+
+### Shared model
+
+- Reusable systems register (`MasterSystem`) so one system can participate in multiple projects without duplicating the master record.
+- Seeded `Water Monitoring Systems Market Scan 2026` project with seven in-scope systems: AQUIS, GWDB, Hydstra, WFieldApp, WASP, Gauges and BLS.
+- Six-domain assessment workspace: architecture, database, infrastructure, integrations, data quality and security.
+- Information completeness uses configurable domain weights (25/20/15/20/10/10). Deferred and not-applicable domains do not reduce the score.
+- Validation completeness, information gaps, claims and document readiness are first-class. Unknown / deferred / future-state records are not treated as current facts and do not penalise scoring unfairly.
+- Claims are stored as AI-extracted proposals until an analyst reviews them. SME validation is a separate request. Restricted security is excluded from external documents.
+- Integration catalogue distinguishes current, future, suspected and retired records.
+- Structured search covers systems, technologies, components, integrations, facts, findings, gaps and published documents.
+- Market-scan Word generation from structured data, with audience filtering, labelled inferences/unknowns, immutable snapshots, SHA-256 checksums and record IDs.
+- Personas: assessment lead (LA), SME Anthony McLoughlin (AM) on the validation portal, document approver Michael (MP) on approval review.
+- AQUIS is on the landscape map as a water-monitoring system with an unconfirmed Groundwater relationship.
+
+### Implemented screens (hash routes)
+
+| Screen | Route | Status |
+| --- | --- | --- |
+| Assessment overview | `#/assessments/aquis` | Implemented |
+| System architecture & technical design | `#/assessments/aquis/architecture` | Implemented |
+| Database architecture | `#/assessments/aquis/database` | Implemented |
+| Infrastructure & hosting | `#/assessments/aquis/infrastructure` | Implemented |
+| Integrations, data flows & batch processes | `#/assessments/aquis/integrations` | Implemented |
+| Data structures & data quality | `#/assessments/aquis/data-quality` | Implemented |
+| Security controls & compliance | `#/assessments/aquis/security` | Implemented (deferred by current scope) |
+| Add evidence & AI analysis | `#/assessments/aquis/evidence/new` | Implemented |
+| AI-extracted claims review | `#/assessments/aquis/evidence/claims-review` | Implemented |
+| SME validation portal | `#/validate/aquis/request-1042` | Implemented |
+| Generated documents & version history | `#/documents/aquis` | Implemented |
+| Document preview / generation | `#/documents/aquis/market-scan/preview` | Implemented |
+| Document approval review | `#/documents/aquis/v0.3/approval` | Implemented |
+| Approved document & publication | `#/documents/aquis/v0.3/publish` | Implemented |
+
+### Assessment overview
+
+- Header: system name, current-state, In progress, RFI scope, Add evidence, Generate document.
+- Owners, assessment lead and last updated.
+- KPIs: information completeness, validation completeness, open Must-priority gaps, document readiness (Ready / Not ready).
+- Six domain cards with completeness bar, evidence count, gap count and a short status line; each card opens that domain.
+- Priority information gaps and recent evidence.
+
+### Domain capture screens (architecture, database, infrastructure, integrations, data quality, security)
+
+- Domain summary, validation status, editable attributes with validation pills (Confirmed, Inferred, Information gap, Unvalidated, To confirm, Future state, Not assessed, Deferred).
+- Domain-specific registers: components, schemas, environments, integrations/data flows/batches, data domains/quality ratings, identity/security controls/compliance obligations.
+- Add record, save draft, request validation (creates an action), mark section complete.
+- Side panel: section progress, linked evidence, information gaps (expand to view all). Security shows Deferred progress, internal-only visibility and no evidence by default.
+- Security details stay restricted; they are not included in the market-scan document unless an internal security appendix is explicitly selected.
+
+### Add evidence and claims review
+
+- Upload source (drop/browse), source metadata, analysis options, processing steps, privacy/redaction check, expected output estimates.
+- Upload & analyse stores proposed claims only. Save source only skips analysis. Auto-request validation is off by default.
+- Claims review: pending / confirmed / corrected / rejected counts, search and domain filter, confirm / correct / reject / needs more evidence, supporting excerpt, evidence quality, impact if approved.
+- Apply reviewed claims updates the assessment only for confirmed/corrected items and can create SME validation requests. Claims are not published as facts until validated.
+
+### SME validation portal
+
+- Request header: due date, requested by, system, progress.
+- Per-finding decision: yes / correct with changes / no / not sure, optional context, previous / save & next, submit validation.
+- Supporting evidence excerpt, why this matters, other items in the request.
+- Responses persist against the validation item and linked claim.
+
+### Documents hub, preview, approval and publication
+
+- Hub: version table, format/status filters, selected-document metadata, download, version comparison, activity, submit for approval (Michael), create copy, regenerate, mark as final, archive.
+- Preview: template/audience/state/format, section toggles, readiness and blocking issues, labelled unvalidated content, Generate Word document (immutable snapshot).
+- Approval: outline, page review, comments, four decisions (Approve, Approve with conditions, Request changes, Reject), review checks, open comments, readiness. Approve locks the file and opens publication.
+- Publication: allowed only after approval; classification, visibility, distribution, search indexing, retention, record ID, checksum. Publish creates immutable v1.0, supersedes the source draft, and does not rewrite the approved file.
+
+### APIs added for this workflow
+
+- `GET /api/documents/by-key/{key}` — versioned document hub payload, comments, checksum, record ID.
+- `GET /api/documents/preview/{key}` — draft preview and blocking issues.
+- `POST /api/documents/{id}/submit` — submit for approval.
+- `POST /api/documents/{id}/comments` and `POST .../comments/{commentId}/resolve`.
+- `POST /api/documents/{id}/decision` — approval decision; Approve locks the file.
+- `PUT /api/documents/{id}/publication` — save publication settings.
+- `POST /api/documents/{id}/publish` — rejected unless `ApprovalState` is Approved; creates v1.0.
+- `POST /api/documents/{id}/copy` and `POST /api/documents/{id}/archive`.
+- `GET /api/documents/compare/{key}` — version comparison summary.
+- `GET /api/validation/requests/{id}`, `PUT /api/validation/items/{id}`, `POST /api/validation/requests/{id}/submit`.
+- `POST /api/claims/{id}/review` and `POST /api/systems/{id}/claims/apply`.
+
+## Remaining work (deferred)
+
+Screen-level polish still to do later:
+
+- Pixel-level layout match to the mockups (icons, page-to-section mapping, zoom/export chrome).
+- Native PDF rendition on publish (Word snapshot is copied today; PDF is a format flag).
+- Published-document record / search result page (`docs/Published Document Record & Search View..png`).
+- Live comparison of document body text rather than activity/readiness stats.
+- Browser walkthrough of the 14 screens after the API is running.
+
+Production acceptance still open:
 
 - Complete project-member and Entra group/application-role administration with record-level project filtering.
 - Add UI template designer and integration/evidence registers beyond the Workshop shortcuts.
 - Add full stakeholder, participant, workshop-note and review-comment timelines.
-- Produce native Word, PDF and Excel report documents; current exports are CSV registers.
+- Produce native Word, PDF and Excel report documents; current Word output is an OpenXML zip without a dedicated Open XML SDK.
 - Add EF Core migrations and run them as a controlled deployment step instead of runtime schema creation.
 - Add automated unit, integration, accessibility and browser tests plus security scanning.
 - Complete the departmental architecture, security, privacy, records-management, retention, backup/restore and operational approvals required by AC-011 and AC-012.
