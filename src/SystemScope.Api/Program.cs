@@ -7,13 +7,28 @@ using SystemScope.Api;
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.AddSystemScopeDataStore();
-var tenant = builder.Configuration["AzureAd:TenantId"];
-var client = builder.Configuration["AzureAd:ClientId"];
-if (!string.IsNullOrWhiteSpace(tenant) && !string.IsNullOrWhiteSpace(client))
-    builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(o => { o.Authority=$"https://login.microsoftonline.com/{tenant}/v2.0"; o.Audience=client; });
+builder.Services.AddScoped<AppAccessService>();
+var entra = builder.Configuration.GetSection("EntraId");
+var tenant = entra["TenantId"] ?? builder.Configuration["AzureAd:TenantId"];
+var apiClient = entra["ApiClientId"] ?? builder.Configuration["AzureAd:ClientId"];
+var audience = entra["Audience"];
+if (!string.IsNullOrWhiteSpace(tenant) && !string.IsNullOrWhiteSpace(apiClient))
+{
+    builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(o =>
+    {
+        o.Authority = $"https://login.microsoftonline.com/{tenant}/v2.0";
+        o.Audience = apiClient;
+        o.TokenValidationParameters.ValidAudiences = string.IsNullOrWhiteSpace(audience)
+            ? [apiClient, $"api://{apiClient}"]
+            : [apiClient, $"api://{apiClient}", audience];
+        o.TokenValidationParameters.NameClaimType = "name";
+        o.TokenValidationParameters.RoleClaimType = "roles";
+        o.MapInboundClaims = false;
+    });
+}
 else builder.Services.AddAuthentication("Development").AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions,DevelopmentAuthHandler>("Development",_=>{});
 builder.Services.AddAuthorization(); builder.Services.AddProblemDetails(); builder.Services.AddScoped<AuditService>();
-var app=builder.Build(); app.UseExceptionHandler(); app.UseDefaultFiles(); app.UseStaticFiles(); app.UseAuthentication(); app.UseAuthorization();
+var app=builder.Build(); app.UseExceptionHandler(); app.UseDefaultFiles(); app.UseStaticFiles(); app.UseAuthentication(); app.UseApplicationAccessGate(); app.UseAuthorization();
 {
     var factory = app.Services.GetRequiredService<IAzureSqlConnectionFactory>();
     var explicitSql = app.Configuration.GetConnectionString("SystemScope");
@@ -24,6 +39,7 @@ var app=builder.Build(); app.UseExceptionHandler(); app.UseDefaultFiles(); app.U
     else
         app.Logger.LogInformation("SystemScope is using the in-memory database. Configure AzureSql to persist to Azure SQL.");
 }
+app.MapAccess();
 var api=app.MapGroup("/api").RequireAuthorization();
 api.MapScan();
 api.MapWorkflow();
@@ -61,4 +77,4 @@ api.MapPost("/projects/{id:guid}/systems/batch",async(Guid id,BatchSystemsInput 
 api.MapGet("/assessments",async(Guid? projectId,AppDbContext db)=>{var q=db.Assessments.Include(x=>x.Responses).ThenInclude(x=>x.Question).AsQueryable();if(projectId is{}pid)q=q.Where(x=>x.ProjectId==pid);var list=await q.ToListAsync();return list.Select(a=>new{a.Id,a.ProjectId,a.SystemId,status=a.Status.ToString(),responses=a.Responses.Select(r=>new{mandatory=r.Question.Mandatory,answered=!string.IsNullOrWhiteSpace(r.Answer),status=r.Status.ToString(),confidence=r.Confidence.ToString()})});});
 api.MapGet("/landscape",async(AppDbContext db)=>await db.Landscape.OrderByDescending(x=>x.CreatedAt).ToListAsync());
 api.MapPost("/landscape",async(LandscapeInput i,AppDbContext db,AuditService audit,ClaimsPrincipal u)=>{var snap=new LandscapeSnapshot{Version=i.Version.Trim(),Layer=i.Layer.Trim(),Title=i.Title.Trim(),ConfirmedBy=i.ConfirmedBy.Trim(),ConfirmedAt=DateTimeOffset.UtcNow,ChangeNote=i.ChangeNote.Trim(),Document=i.Document};db.Landscape.Add(snap);await audit.Record(db,u,"Create","LandscapeSnapshot",snap.Id,$"{snap.Layer} {snap.Version}");await db.SaveChangesAsync();return Results.Created($"/api/landscape/{snap.Id}",snap);});
-app.MapFallbackToFile("index.html"); app.Run(); public partial class Program{}
+app.MapFallbackToFile("index.html").AllowAnonymous(); app.Run(); public partial class Program{}

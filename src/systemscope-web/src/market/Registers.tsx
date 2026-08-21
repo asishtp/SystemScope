@@ -3,25 +3,195 @@ import { api } from '../landscape/api';
 import { formatDate, readinessLabel, type AssessmentRow, type MasterRow, type SearchHit } from './types';
 import './market.css';
 
-export function SystemsView({ onOpen }: { onOpen: (key: string) => void }) {
+const SYSTEM_TECH: Record<string, string[]> = {
+  aquis: ['Oracle Forms'],
+  bls: ['SIR', 'OGIA', 'Groundwater DB', 'Spatial'],
+  gwdb: ['Oracle Forms', 'GWPlot', 'Drill Log'],
+  wasp: ['Power BI', 'Hydstra', 'DES Storage'],
+  gauges: ['Time-series Network'],
+  wfieldapp: ['Mobile App'],
+  hydstra: ['Hydstra', 'Hydrotel', 'Time-series DB'],
+};
+
+const SYSTEM_ICON: Record<string, string> = {
+  aquis: '☰',
+  bls: '📍',
+  gwdb: '〰',
+  wasp: '⚗',
+  gauges: '◎',
+  wfieldapp: '📱',
+  hydstra: '📈',
+};
+
+function systemKey(row: MasterRow) {
+  return (row.catalogKey || row.acronym || '').toLowerCase();
+}
+
+function technologies(row: MasterRow) {
+  const fromTags = (row.tags || '').split(/[,;|]/).map(s => s.trim()).filter(Boolean);
+  const designed = fromTags.some(t => t.includes(' ') || /[A-Z]/.test(t));
+  if (designed && fromTags.length) return fromTags;
+  return SYSTEM_TECH[systemKey(row)] ?? (fromTags.length ? fromTags : row.product ? [row.product] : []);
+}
+
+function blurb(text?: string) {
+  if (!text) return 'No description';
+  const sentence = text.split(/(?<=\.)\s/)[0];
+  return sentence.length <= 140 ? sentence : `${text.slice(0, 110).trim()}…`;
+}
+
+function isLegacy(lifecycle: string) {
+  return /legacy|maintain/i.test(lifecycle);
+}
+
+export function SystemsView({ onOpen, onOpenAssessment }: { onOpen: (key: string) => void; onOpenAssessment?: (key: string) => void }) {
   const [rows, setRows] = useState<MasterRow[]>([]);
   const [q, setQ] = useState('');
+  const [status, setStatus] = useState('All statuses');
+  const [sort, setSort] = useState('name-asc');
+  const [layout, setLayout] = useState<'list' | 'grid'>('list');
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [menu, setMenu] = useState<string | null>(null);
+
   useEffect(() => { api<MasterRow[]>('/scan/systems').then(setRows); }, []);
-  const shown = rows.filter(r => `${r.name} ${r.acronym} ${r.tags}`.toLowerCase().includes(q.toLowerCase()));
+  useEffect(() => {
+    if (!menu) return;
+    const close = () => setMenu(null);
+    window.addEventListener('click', close);
+    return () => window.removeEventListener('click', close);
+  }, [menu]);
+
+  const statuses = ['All statuses', ...Array.from(new Set(rows.map(r => r.lifecycle).filter(Boolean)))];
+  const shown = rows
+    .filter(r => {
+      const hay = `${r.name} ${r.acronym} ${r.description} ${r.tags} ${technologies(r).join(' ')}`.toLowerCase();
+      if (q && !hay.includes(q.toLowerCase())) return false;
+      if (status !== 'All statuses' && r.lifecycle !== status) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      if (sort === 'name-desc') return a.name.localeCompare(b.name) * -1;
+      if (sort === 'progress') return (b.informationCompleteness || 0) - (a.informationCompleteness || 0);
+      if (sort === 'updated') return (b.updatedAt || '').localeCompare(a.updatedAt || '');
+      return a.name.localeCompare(b.name);
+    });
+
+  const active = rows.filter(r => r.lifecycle === 'Active').length;
+  const legacy = rows.filter(r => isLegacy(r.lifecycle)).length;
+  const average = rows.length ? Math.round(rows.reduce((n, r) => n + (r.informationCompleteness || 0), 0) / rows.length) : 0;
+
+  const open = (row: MasterRow) => onOpen(systemKey(row));
+
   return (
-    <section className="panel">
-      <div className="panel-title"><div><h2>Systems register</h2><p>One reusable record per system. A system can belong to multiple assessment projects.</p></div></div>
-      <div className="filters"><input placeholder="Search systems, technologies, tags…" value={q} onChange={e => setQ(e.target.value)} /></div>
-      {shown.map(r => (
-        <button className="system-row" key={r.id} onClick={() => onOpen(r.catalogKey || r.acronym.toLowerCase())}>
-          <span className="system-icon">▣</span>
-          <span><b>{r.name} {r.acronym && `(${r.acronym})`}</b><small>{r.description || 'No description'} · {r.technicalOwner || 'No technical owner'}</small></span>
-          <span>{r.lifecycle}</span>
-          <span>{r.informationCompleteness}% complete</span>
-        </button>
-      ))}
-      {!shown.length && <div className="empty"><p>No systems in the register yet.</p></div>}
-    </section>
+    <div className="systems-page">
+      <div className="sys-kpis">
+        <article><span className="sys-kpi-ico mint">▤</span><div><strong>{rows.length}</strong><small>Total systems</small></div></article>
+        <article><span className="sys-kpi-ico mint">✓</span><div><strong>{active}</strong><small>Active</small></div></article>
+        <article><span className="sys-kpi-ico peach">🛡</span><div><strong>{legacy}</strong><small>Legacy / Maintain</small></div></article>
+        <article><span className="sys-kpi-ico lilac">◔</span><div><strong>{average}%</strong><small>Average completion</small></div></article>
+      </div>
+      <section className="panel systems-register">
+        <div className="panel-title">
+          <div>
+            <h2>Systems register</h2>
+            <p>One reusable record per system. A system can belong to multiple assessment projects.</p>
+          </div>
+        </div>
+        <div className="sys-toolbar">
+          <label className="sys-search"><span>⌕</span><input placeholder="Search systems, technologies, tags…" value={q} onChange={e => setQ(e.target.value)} /></label>
+          <button className={`ghost${filtersOpen ? ' selected' : ''}`} type="button" onClick={() => setFiltersOpen(o => !o)}>Filters</button>
+          <select value={status} onChange={e => setStatus(e.target.value)} aria-label="Filter by status">
+            {statuses.map(s => <option key={s}>{s}</option>)}
+          </select>
+          <select value={sort} onChange={e => setSort(e.target.value)} aria-label="Sort systems">
+            <option value="name-asc">Sort by: Name (A–Z)</option>
+            <option value="name-desc">Sort by: Name (Z–A)</option>
+            <option value="progress">Sort by: Assessment progress</option>
+            <option value="updated">Sort by: Updated</option>
+          </select>
+          <div className="sys-view-toggle" role="group" aria-label="Layout">
+            <button type="button" className={layout === 'list' ? 'active' : ''} aria-pressed={layout === 'list'} onClick={() => setLayout('list')} title="List view">☰</button>
+            <button type="button" className={layout === 'grid' ? 'active' : ''} aria-pressed={layout === 'grid'} onClick={() => setLayout('grid')} title="Grid view">⊞</button>
+          </div>
+        </div>
+        {filtersOpen && (
+          <div className="sys-filter-hint">
+            <p>Filter by lifecycle status, search across system name, description and technologies, then sort the register.</p>
+          </div>
+        )}
+        {layout === 'list' ? (
+          <>
+            <div className="sys-head">
+              <span>System</span><span>Technology</span><span>Status</span><span>Assessment progress</span><span>Updated</span><span />
+            </div>
+            {shown.map(row => {
+              const key = systemKey(row);
+              const techs = technologies(row);
+              const extra = Math.max(0, techs.length - 3);
+              const visible = extra ? techs.slice(0, 3) : techs;
+              const pct = row.informationCompleteness || 0;
+              return (
+                <div
+                  className="sys-row"
+                  key={row.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => open(row)}
+                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(row); } }}
+                >
+                  <span className="sys-identity">
+                    <span className={`sys-ico ${key}`}>{SYSTEM_ICON[key] || '▣'}</span>
+                    <span><b>{row.name}{row.acronym ? ` (${row.acronym})` : ''}</b><small>{blurb(row.description)}</small></span>
+                  </span>
+                  <span className="sys-tech">
+                    {visible.map(t => <span className="tech-chip" key={t}>{t}</span>)}
+                    {extra > 0 && <span className="tech-chip more">+{extra}</span>}
+                  </span>
+                  <span><span className={`pill${isLegacy(row.lifecycle) ? ' amber' : ''}`}>{row.lifecycle || 'Active'}</span></span>
+                  <span className="sys-progress">
+                    <span className={`mini-bar${isLegacy(row.lifecycle) ? ' amber' : ''}`}><i style={{ width: `${pct}%` }} /></span>
+                    <em>{pct}%</em>
+                  </span>
+                  <span className="sys-updated">{formatDate(row.updatedAt)}</span>
+                  <span className="sys-more">
+                    <button
+                      type="button"
+                      className="icon-btn"
+                      aria-label="System actions"
+                      onClick={e => { e.stopPropagation(); setMenu(menu === row.id ? null : row.id); }}
+                    >⋮</button>
+                    {menu === row.id && (
+                      <span className="sys-menu" onClick={e => e.stopPropagation()}>
+                        <button type="button" onClick={() => open(row)}>Open system</button>
+                        {onOpenAssessment && <button type="button" onClick={() => onOpenAssessment(key)}>Open assessment</button>}
+                      </span>
+                    )}
+                  </span>
+                </div>
+              );
+            })}
+          </>
+        ) : (
+          <div className="sys-grid">
+            {shown.map(row => {
+              const key = systemKey(row);
+              const pct = row.informationCompleteness || 0;
+              return (
+                <button className="sys-card" key={row.id} onClick={() => open(row)}>
+                  <span className={`sys-ico ${key}`}>{SYSTEM_ICON[key] || '▣'}</span>
+                  <b>{row.name}{row.acronym ? ` (${row.acronym})` : ''}</b>
+                  <small>{blurb(row.description)}</small>
+                  <span className={`pill${isLegacy(row.lifecycle) ? ' amber' : ''}`}>{row.lifecycle || 'Active'}</span>
+                  <span className="sys-progress"><span className={`mini-bar${isLegacy(row.lifecycle) ? ' amber' : ''}`}><i style={{ width: `${pct}%` }} /></span><em>{pct}%</em></span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+        {!shown.length && <div className="empty"><p>No systems in the register yet.</p></div>}
+        {!!shown.length && <div className="sys-foot">Showing {shown.length} system{shown.length === 1 ? '' : 's'}</div>}
+      </section>
+    </div>
   );
 }
 

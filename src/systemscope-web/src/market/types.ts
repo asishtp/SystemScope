@@ -175,6 +175,7 @@ export type MasterRow = {
   informationCompleteness: number;
   validationCompleteness: number;
   documentReadiness: number;
+  updatedAt?: string;
   projects: { id: string; projectId: string; catalogKey: string }[];
 };
 

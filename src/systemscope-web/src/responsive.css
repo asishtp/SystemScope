@@ -1,8 +1,8 @@
-.menu-button,.nav-close,.nav-scrim{display:none}.shell>aside{z-index:30}.brand>span,.avatar{flex:0 0 auto}main{min-width:0}.primary{min-height:42px}nav button{min-height:44px}
+.menu-button,.nav-close,.nav-scrim{display:none}.shell>aside{z-index:30}.brand>span,.avatar{flex:0 0 auto}main{min-width:0}.primary{min-height:42px}
 @media(max-width:950px){
  .shell{display:block}.shell>aside{width:min(310px,86vw);transform:translateX(-105%);transition:transform .22s ease;box-shadow:8px 0 35px #0a242552}.shell>aside.nav-open{transform:translateX(0)}
- .brand>div,.aside-foot>div:last-child{display:block}.nav-close{display:block;margin-left:auto;border:0;background:transparent;color:white;font-size:28px;padding:5px}.nav-scrim{display:block;position:fixed;inset:0;border:0;background:#071d1f80;z-index:20}
- .menu-button{display:grid;place-items:center;border:1px solid #d5e0de;background:white;border-radius:8px;width:42px;height:42px;font-size:20px;flex:0 0 auto}main{padding:0 22px 40px}header{gap:16px;height:88px}.page-heading{flex:1}
+ .brand>div,.aside-foot>div:last-child{display:block}.nav-close{display:block;margin-left:auto;border:0;background:transparent;color:white;font-size:28px;padding:5px}.nav-scrim{display:block;position:fixed;inset:0;border:0;background:#071d1f80;z-index:20}nav button{min-height:44px}
+ .menu-button{display:grid;place-items:center;border:1px solid #d5e0de;background:white;border-radius:8px;width:42px;height:42px;font-size:20px;flex:0 0 auto}main{padding:0 22px 40px}header{gap:16px;min-height:88px;height:auto;align-items:flex-start}.page-heading{flex:1}
  .cards,.cards-8{grid-template-columns:1fr 1fr}.columns{grid-template-columns:1fr}.workshop-body{display:block}.workshop-body>aside:first-child{display:none}.context{display:grid!important;border:0!important;border-top:1px solid #e3eae8}
  .panel:has(.register-row){overflow-x:auto}.register-row{min-width:760px}.panel:has(.register-row) .panel-title,.panel:has(.register-row) .filters{position:sticky;left:0;background:white;z-index:1}
 }

@@ -11,6 +11,7 @@
     "test": "tsx --test src/landscape/assessment.test.ts src/market/scoring.test.ts"
   },
   "dependencies": {
+    "@azure/msal-browser": "^4.26.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },

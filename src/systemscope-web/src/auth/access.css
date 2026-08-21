@@ -1,0 +1,10 @@
+.access-shell{min-height:100vh;display:grid;place-items:center;background:#0f2f31;padding:24px}
+.access-card{width:min(460px,100%);background:white;border-radius:16px;padding:36px 32px;display:grid;gap:16px}
+.access-card h1{margin:0;font-size:28px;color:#102f31}
+.access-card p{margin:0;color:#5d7370;line-height:1.5}
+.access-error{background:#f8e4e0;color:#a83b2b;padding:12px;border-radius:8px}
+.access-info{background:#eef5f3;padding:14px;border-radius:10px}
+.access-info p{margin-top:8px}
+.access-button{border:0;background:#167b70;color:white;padding:12px 16px;border-radius:8px;font-weight:700;cursor:pointer}
+.access-button:disabled{opacity:.6;cursor:not-allowed}
+.access-link{border:0;background:transparent;color:#167b70;font-weight:700;cursor:pointer}

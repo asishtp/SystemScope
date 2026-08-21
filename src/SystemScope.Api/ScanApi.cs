@@ -39,6 +39,7 @@ public static class ScanApi
                     informationCompleteness = info,
                     validationCompleteness = related.Count == 0 ? 0 : (int)Math.Round(related.Average(s => s.ValidationCompleteness)),
                     documentReadiness = related.Count == 0 ? 0 : (int)Math.Round(related.Average(s => s.DocumentReadiness)),
+                    updatedAt = related.Select(s => s.UpdatedAt).Append(m.UpdatedAt).Max(),
                 };
             });
         });

@@ -1,4 +1,4 @@
-.shell>aside{overflow:hidden}.brand{flex:0 0 auto}nav{margin-top:22px;gap:2px;overflow:auto;flex:1}nav button{padding:9px 12px;font-size:13px}.scan{padding-top:8px}
+.shell>aside{overflow:hidden}.brand{flex:0 0 auto}nav{margin-top:16px;gap:1px;overflow-x:hidden;overflow-y:auto;flex:1;min-height:0}nav button{padding:8px 10px;font-size:13px}.scan{padding-top:8px}
 .scan-head{display:flex;justify-content:space-between;gap:24px;align-items:flex-start;margin-bottom:18px}
 .scan-head small{letter-spacing:1.6px;color:#608079;font-size:10px;font-weight:700}
 .scan-head h1{font-size:32px;margin:6px 0 4px}
@@ -63,7 +63,7 @@
 .search-hit small{display:block;color:#6a807c;margin-top:3px}
 .icon-btn{border:0;background:transparent;color:#5d7370;padding:4px}
 .row-icons{display:flex;gap:4px;justify-content:flex-end}
-.ghost.compact{padding:6px 10px;font-size:12px}
+.ghost.compact,.primary.compact{padding:6px 10px;font-size:12px}
 .ops-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
 .ops-grid small{display:block;color:#7a8d8a;font-size:11px}
 .inline-fields{display:grid;grid-template-columns:1fr 1fr;gap:16px}
@@ -149,6 +149,64 @@ blockquote{background:#f4f8f7;border-radius:8px;padding:12px;color:#3d5552;font-
 .choice-changes.selected,.choice-changes:hover{border-color:#c98a1a;background:#f8edd6;color:#8a5b12}
 .choice-reject.selected,.choice-reject:hover{border-color:#a83b2b;background:#f8e4e0;color:#a83b2b}
 .warn-btn{border-color:#e2b56a;color:#8a5b12}
+.systems-page{display:grid;gap:16px}
+.sys-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.sys-kpis article{display:flex;align-items:center;gap:16px;background:white;border:1px solid #e0e7e5;border-radius:14px;padding:18px 20px}
+.sys-kpi-ico{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;font-size:18px;flex:0 0 auto}
+.sys-kpi-ico.mint{background:#e4f4ef;color:#167b70}
+.sys-kpi-ico.peach{background:#f7ead6;color:#c48a2a}
+.sys-kpi-ico.lilac{background:#ece8f8;color:#6b5ea8}
+.sys-kpis strong{display:block;font-size:28px;line-height:1.1}
+.sys-kpis small{color:#6a807c;font-size:13px}
+.systems-register .panel-title{border:0;padding-bottom:8px}
+.sys-toolbar{display:flex;gap:10px;align-items:center;padding:4px 18px 16px;flex-wrap:wrap}
+.sys-search{flex:1;min-width:220px;display:flex;align-items:center;gap:8px;border:1px solid #d5e0de;border-radius:8px;padding:0 12px;background:white}
+.sys-search span{color:#7a8d8a}
+.sys-search input{border:0;padding:10px 0;width:100%}
+.sys-toolbar>select,.sys-toolbar>.ghost{flex:0 0 auto}
+.sys-toolbar>.ghost.selected{border-color:#167b70;background:#e7f5f1}
+.sys-toolbar>select{min-width:150px}
+.sys-view-toggle{display:flex;border:1px solid #d5e0de;border-radius:8px;overflow:hidden;margin-left:auto}
+.sys-view-toggle button{border:0;background:white;color:#5d7370;width:38px;height:38px}
+.sys-view-toggle button.active{background:#e7f5f1;color:#167b70}
+.sys-filter-hint{padding:0 18px 12px;color:#6a807c}
+.sys-head,.sys-row{display:grid;grid-template-columns:minmax(260px,2.2fr) minmax(170px,1.5fr) 130px 170px 110px 36px;gap:12px;align-items:center;padding:14px 18px}
+.sys-head{color:#7a8d8a;font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;border-bottom:1px solid #edf1f0}
+.sys-row{width:100%;border:0;border-bottom:1px solid #edf1f0;background:white;text-align:left;cursor:pointer;position:relative}
+.sys-row:hover{background:#f7fbfa}
+.sys-identity{display:flex;gap:12px;align-items:center;min-width:0}
+.sys-identity>span:last-child{min-width:0}
+.sys-identity b,.sys-identity small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sys-identity small{color:#788a88;margin-top:3px;font-weight:400}
+.sys-ico{width:40px;height:40px;border-radius:10px;background:#dcefeb;color:#176f66;display:grid;place-items:center;flex:0 0 auto;font-size:16px}
+.sys-ico.bls{background:#dce8f4;color:#2a5f93}
+.sys-ico.wasp{background:#e8eef6;color:#3a5f88}
+.sys-tech{display:flex;flex-wrap:wrap;gap:6px}
+.tech-chip{display:inline-flex;align-items:center;background:#eef3f2;color:#3d5552;border-radius:99px;padding:4px 9px;font-size:11px;font-weight:600}
+.tech-chip.more{background:#e1f2ed;color:#1b7165}
+.sys-progress{display:flex;align-items:center;gap:10px}
+.sys-progress .mini-bar{flex:1;margin:0;min-width:72px;height:8px}
+.sys-progress .mini-bar.amber i{background:#d08a2a}
+.sys-progress em{font-style:normal;color:#5d7370;font-size:13px;min-width:36px;text-align:right}
+.sys-updated{color:#5d7370;font-size:13px}
+.sys-more{position:relative;display:flex;justify-content:flex-end}
+.sys-more .icon-btn{width:32px;height:32px;border-radius:8px;font-size:18px}
+.sys-menu{position:absolute;right:0;top:34px;background:white;border:1px solid #e0e7e5;border-radius:10px;box-shadow:0 10px 30px #102f3122;display:grid;min-width:160px;z-index:3;padding:6px}
+.sys-menu button{border:0;background:transparent;text-align:left;padding:8px 10px;border-radius:7px;color:#173f3d}
+.sys-menu button:hover{background:#eef7f4}
+.sys-foot{padding:14px 18px;color:#6a807c;font-size:13px}
+.sys-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;padding:8px 18px 18px}
+.sys-card{display:grid;gap:8px;justify-items:start;border:1px solid #e0e7e5;border-radius:12px;padding:18px;background:white;text-align:left}
+.sys-card:hover{border-color:#b7ddd4}
+.sys-card b{font-size:15px}
+.sys-card small{color:#788a88}
+.success-banner{display:flex;align-items:center;gap:12px;background:#e8f6f1;border:1px solid #cfe8e0;color:#116d63;padding:13px 18px;border-radius:12px;margin-bottom:16px}
+.success-banner .success-check{width:22px;height:22px;border-radius:50%;background:#167b70;color:white;display:grid;place-items:center;font-size:12px;flex:0 0 auto}
+.success-banner p{flex:1;color:#116d63;margin:0}
+.success-banner .view-doc{margin-left:auto;color:#167b70;background:transparent;border:0;font-weight:700;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.success-banner .icon-btn{color:#5d7370}
+@media(max-width:1100px){.sys-kpis,.sys-grid{grid-template-columns:1fr 1fr}.systems-register{overflow-x:auto}.sys-head,.sys-row{min-width:980px}}
+@media(max-width:700px){.sys-kpis,.sys-grid{grid-template-columns:1fr}.sys-toolbar{display:grid}.sys-view-toggle{margin-left:0}}
 .approved-banner{display:flex;align-items:center;gap:14px;background:#e7f5f1;color:#116d63;border-radius:12px;padding:14px 18px;margin-bottom:16px}
 .approved-banner p{color:#116d63}
 .ok-dot{width:28px;height:28px;border-radius:50%;background:#167b70;color:white;display:grid;place-items:center;font-weight:700}

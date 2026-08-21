@@ -1,22 +1,30 @@
 targetScope = 'resourceGroup'
 
-@description('Globally unique web application name')
+@description('Web App name, for example app-systemscope-web-dev')
 param appName string
+
+@description('Existing App Service plan name in this resource group, for example the WaterSolutions plan')
+param existingPlanName string
+
+@description('Azure SQL fully qualified server name')
+param sqlServerFqdn string = 'sql-water-ws-dev.database.windows.net'
+
+@description('Azure SQL database that already holds SystemScope schema')
+param sqlDatabaseName string = 'sqldb-water-ws-local'
+
 param location string = resourceGroup().location
-param sqlAdministratorObjectId string
-param sqlAdministratorLogin string
 param entraTenantId string = tenant().tenantId
-param entraClientId string
+param entraSpaClientId string
+param entraApiClientId string
+param entraScope string = 'api://${entraApiClientId}/access_as_user'
+param runtimeStack string = 'DOTNETCORE|10.0'
+param linuxApp bool = true
 
-var sqlName = '${appName}-sql'
-var planName = '${appName}-plan'
+var authority = 'https://login.microsoftonline.com/${entraTenantId}'
+var audience = 'api://${entraApiClientId}'
 
-resource plan 'Microsoft.Web/serverfarms@2024-11-01' = {
-  name: planName
-  location: location
-  sku: { name: 'P0v3', tier: 'PremiumV3', capacity: 1 }
-  kind: 'linux'
-  properties: { reserved: true }
+resource plan 'Microsoft.Web/serverfarms@2024-11-01' existing = {
+  name: existingPlanName
 }
 
 resource insights 'Microsoft.Insights/components@2020-02-02' = {
@@ -26,41 +34,17 @@ resource insights 'Microsoft.Insights/components@2020-02-02' = {
   properties: { Application_Type: 'web' }
 }
 
-resource sqlServer 'Microsoft.Sql/servers@2023-08-01' = {
-  name: sqlName
-  location: location
-  properties: {
-    administrators: {
-      administratorType: 'ActiveDirectory'
-      principalType: 'User'
-      login: sqlAdministratorLogin
-      sid: sqlAdministratorObjectId
-      tenantId: entraTenantId
-      azureADOnlyAuthentication: true
-    }
-    minimalTlsVersion: '1.2'
-    publicNetworkAccess: 'Enabled'
-  }
-}
-
-resource database 'Microsoft.Sql/servers/databases@2023-08-01' = {
-  parent: sqlServer
-  name: 'systemscope'
-  location: location
-  sku: { name: 'S0', tier: 'Standard' }
-  properties: { zoneRedundant: false }
-}
-
 resource app 'Microsoft.Web/sites@2024-11-01' = {
   name: appName
   location: location
-  kind: 'app,linux'
+  kind: linuxApp ? 'app,linux' : 'app'
   identity: { type: 'SystemAssigned' }
   properties: {
     serverFarmId: plan.id
     httpsOnly: true
     siteConfig: {
-      linuxFxVersion: 'DOTNETCORE|10.0'
+      linuxFxVersion: linuxApp ? runtimeStack : ''
+      netFrameworkVersion: linuxApp ? '' : 'v10.0'
       minTlsVersion: '1.2'
       ftpsState: 'Disabled'
       http20Enabled: true
@@ -68,15 +52,28 @@ resource app 'Microsoft.Web/sites@2024-11-01' = {
       healthCheckPath: '/health'
       appSettings: [
         { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: insights.properties.ConnectionString }
+        { name: 'SCM_DO_BUILD_DURING_DEPLOYMENT', value: 'false' }
+        { name: 'ENABLE_ORYX_BUILD', value: 'false' }
+        { name: 'WEBSITE_RUN_FROM_PACKAGE', value: '1' }
+        { name: 'ASPNETCORE_ENVIRONMENT', value: 'Production' }
         { name: 'AzureAd__TenantId', value: entraTenantId }
-        { name: 'AzureAd__ClientId', value: entraClientId }
+        { name: 'AzureAd__ClientId', value: entraApiClientId }
         { name: 'EntraId__TenantId', value: entraTenantId }
-        { name: 'AzureSql__Server', value: sqlServer.properties.fullyQualifiedDomainName }
-        { name: 'AzureSql__Database', value: database.name }
+        { name: 'EntraId__Authority', value: authority }
+        { name: 'EntraId__ClientId', value: entraSpaClientId }
+        { name: 'EntraId__ApiClientId', value: entraApiClientId }
+        { name: 'EntraId__Audience', value: audience }
+        { name: 'EntraId__Scope', value: entraScope }
+        { name: 'AzureSql__Server', value: sqlServerFqdn }
+        { name: 'AzureSql__Database', value: sqlDatabaseName }
         { name: 'AzureSql__AuthenticationMode', value: 'EntraId' }
         { name: 'AzureSql__Encrypt', value: 'true' }
         { name: 'AzureSql__TrustServerCertificate', value: 'false' }
         { name: 'AzureSql__ConnectionTimeout', value: '30' }
+        { name: 'DatabaseMigrations__RunOnStartup', value: 'true' }
+        { name: 'DatabaseMigrations__MigrationsPath', value: 'database/migrations' }
+        { name: 'DatabaseMigrations__AppliedBy', value: 'SystemScope.AppService' }
+        { name: 'DatabaseMigrations__FailStartupOnError', value: 'true' }
       ]
     }
   }
@@ -85,4 +82,4 @@ resource app 'Microsoft.Web/sites@2024-11-01' = {
 output webAppName string = app.name
 output webAppUrl string = 'https://${app.properties.defaultHostName}'
 output managedIdentityObjectId string = app.identity.principalId
-output sqlServerName string = sqlServer.name
+output managedIdentityName string = app.name

@@ -40,14 +40,34 @@ https://<app>.azurewebsites.net/       React SPA
 https://<app>.azurewebsites.net/api/* .NET 10 API
 ```
 
-Provision the supporting App Service plan, single Web App, Azure SQL database and Application Insights instance:
+The intended development host sits beside WaterSolutions:
 
-```powershell
-az deployment group create --resource-group <resource-group> --template-file infra/main.bicep --parameters appName=<unique-name> entraClientId=<api-app-registration-client-id> sqlAdministratorObjectId=<object-id> sqlAdministratorLogin=<name>
+```text
+Resource group  rg-rwf-dataplatform-dev
+Web App         app-systemscope-web-dev
+Plan            same App Service plan as app-water-ws-web-dev
+SQL             sql-water-ws-dev / sqldb-water-ws-local
 ```
 
-After provisioning, connect as the configured Entra SQL administrator and grant the Web App managed identity the minimum database roles required by the approved migration process. Production should run reviewed EF migrations from the deployment pipeline; runtime schema creation is suitable only for the initial scaffold.
+Publish and deploy (creates the Web App if needed, sets Entra/SQL app settings, zip-deploys):
 
-Configure the Entra app registration to issue access tokens for the API, define the departmental application roles, and assign users/groups. Before production, apply the department's private networking, access restrictions, classification, retention, backup, restore, security and records-management decisions.
+```powershell
+az login --tenant d16de530-94e7-4158-b7e2-6ee220af628d
+.\infra\Deploy-SystemScope.ps1
+```
+
+After the first deploy, grant the Web App managed identity database access as an Entra SQL administrator:
+
+```powershell
+sqlcmd -S sql-water-ws-dev.database.windows.net -d sqldb-water-ws-local -G -I -i infra/Grant-AppService-SqlAccess.sql
+```
+
+Register `https://app-systemscope-web-dev.azurewebsites.net` as an Entra SPA redirect URI on client `e020e24c-ff88-4937-8860-0bedb9edfadf` if the deploy script could not add it.
+
+To provision the Web App from Bicep onto an existing plan instead of the script:
+
+```powershell
+az deployment group create --resource-group rg-rwf-dataplatform-dev --template-file infra/main.bicep --parameters appName=app-systemscope-web-dev existingPlanName=<plan-name> entraSpaClientId=e020e24c-ff88-4937-8860-0bedb9edfadf entraApiClientId=d40a5006-b97d-485d-b007-e2268d00f165
+```
 
 The workflow in `.github/workflows/deploy.yml` produces and deploys the single combined artifact using workload identity federation. Configure the three Azure repository secrets and `AZURE_WEBAPP_NAME` repository variable before enabling it.
