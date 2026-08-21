@@ -124,8 +124,16 @@ function Publish-App {
 
 function Deploy-Zip {
     if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
-    Write-Host "Zipping $publishDir"
-    Compress-Archive -Path (Join-Path $publishDir '*') -DestinationPath $zipPath -Force
+    Write-Host "Zipping $publishDir (Linux-safe tar zip)"
+    $zipFull = (Resolve-Path -LiteralPath (Split-Path $zipPath -Parent)).Path
+    $zipName = Split-Path $zipPath -Leaf
+    Push-Location $publishDir
+    try {
+        tar.exe -a -cf (Join-Path $zipFull $zipName) *
+    }
+    finally { Pop-Location }
+    Write-Host "Setting Linux startup command"
+    az webapp config set --resource-group $ResourceGroup --name $WebAppName --startup-file 'dotnet SystemScope.Api.dll' --output none
     Write-Host "Deploying $zipPath to $WebAppName"
     az webapp deploy --resource-group $ResourceGroup --name $WebAppName --src-path $zipPath --type zip --timeout 1800
 }
