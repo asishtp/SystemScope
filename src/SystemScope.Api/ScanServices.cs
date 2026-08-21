@@ -10,12 +10,14 @@ public static class ScanScoring
 {
     public static readonly (ScanDomainKind Kind, int Weight, string Title)[] Weights =
     [
-        (ScanDomainKind.Architecture, 25, "System architecture & technical design"),
-        (ScanDomainKind.Database, 20, "Database"),
-        (ScanDomainKind.Infrastructure, 15, "Infrastructure & hosting"),
-        (ScanDomainKind.Integrations, 20, "Integrations & data flows"),
-        (ScanDomainKind.DataQuality, 10, "Data structures & data quality"),
-        (ScanDomainKind.Security, 10, "Security controls & compliance"),
+        (ScanDomainKind.Architecture, 20, "System architecture & technical design"),
+        (ScanDomainKind.Database, 15, "Oracle Forms and database architecture"),
+        (ScanDomainKind.Infrastructure, 10, "Infrastructure, hosting and environments"),
+        (ScanDomainKind.Integrations, 15, "Interfaces and integrations"),
+        (ScanDomainKind.DataQuality, 10, "Data models, schemas and data quality"),
+        (ScanDomainKind.Security, 10, "Security architecture, access and compliance"),
+        (ScanDomainKind.Operations, 10, "Deployment, support and operations"),
+        (ScanDomainKind.Limitations, 10, "Limitations, risks and legacy dependencies"),
     ];
 
     public static readonly Dictionary<ScanDomainKind, string[]> RequiredAttributes = new()
@@ -46,6 +48,14 @@ public static class ScanScoring
             "Authentication", "Single sign-on", "Multi-factor authentication", "Role-based access",
             "Privileged access", "Encryption at rest", "Encryption in transit", "Audit logging",
             "Vulnerability management", "Applicable obligations"
+        ],
+        [ScanDomainKind.Operations] =
+        [
+            "Release process", "Support model", "Support hours", "Patching process", "Monitoring", "Escalation path"
+        ],
+        [ScanDomainKind.Limitations] =
+        [
+            "Known limitations", "Technical debt", "Vendor support status", "Key-person dependency", "Legacy dependencies", "Replacement constraints"
         ],
     };
 
@@ -135,7 +145,18 @@ public static class ScanWorkspace
     public static async Task<ScanAssessment> Ensure(AppDbContext db, AssessedSystem system)
     {
         var scan = await db.ScanAssessments.Include(x => x.Domains).FirstOrDefaultAsync(x => x.AssessedSystemId == system.Id);
-        if (scan is not null) return scan;
+        if (scan is not null)
+        {
+            var added = false;
+            foreach (var (kind, _, _) in ScanScoring.Weights)
+            {
+                if (scan.Domains.Any(d => d.Kind == kind)) continue;
+                scan.Domains.Add(new ScanDomainState { Kind = kind, Requirement = DomainRequirement.Required });
+                added = true;
+            }
+            if (added) await db.SaveChangesAsync();
+            return scan;
+        }
         var master = system.MasterSystemId is Guid mid
             ? await db.MasterSystems.FindAsync(mid)
             : await db.MasterSystems.FirstOrDefaultAsync(x => x.Acronym == system.Acronym || x.Name == system.Name);
@@ -230,8 +251,10 @@ public static class ScanWorkspace
         ScanDomainKind.Database => ["walkthrough", "Oracle", "database"],
         ScanDomainKind.Infrastructure => ["walkthrough", "hosting"],
         ScanDomainKind.Integrations => ["walkthrough", "drill", "interface"],
-        ScanDomainKind.DataQuality => ["quality", "domain"],
+        ScanDomainKind.DataQuality => ["quality", "domain", "schema"],
         ScanDomainKind.Security => ["security", "identity"],
+        ScanDomainKind.Operations => ["support", "patch", "release", "monitor"],
+        ScanDomainKind.Limitations => ["legacy", "risk", "limitation", "dependency"],
         _ => []
     };
 
@@ -358,16 +381,19 @@ public static class MarketScanDocument
             Heading(body, $"4. System overview — {system.Name}", "Heading1");
             Para(body, system.Overview);
             Section(body, "5. System architecture and technical design", system.Architecture);
-            Section(body, "6. Database", system.Database);
-            Section(body, "7. Infrastructure and hosting", system.Infrastructure);
-            Section(body, "8. Integrations, data flows and batch processes", system.Integrations);
-            Section(body, "9. Data structures and data quality", system.Data);
-            if (model.IncludeSecurity) Section(body, "10. Security controls and compliance", system.Security);
+            Section(body, "6. Oracle Forms and database architecture", system.Database);
+            Section(body, "7. Infrastructure, hosting and environments", system.Infrastructure);
+            Section(body, "8. Interfaces and integrations with other systems", system.Integrations);
+            Section(body, "9. Data flows and batch processes", system.DataFlows);
+            Section(body, "10. Data models, schemas and entity relationships", system.Data);
+            if (model.IncludeSecurity) Section(body, "11. Security architecture, access controls and compliance", system.Security);
             else Para(body, "Security content is excluded from this audience or deferred by scope.");
-            Heading(body, "11. Risks and constraints", "Heading1");
+            Section(body, "12. Deployment, support and operational procedures", system.Operations);
+            Section(body, "13. Known technical limitations, risks and legacy dependencies", system.Limitations);
+            Heading(body, "14. Risks and constraints", "Heading1");
             if (system.Findings.Count == 0) Para(body, "No approved findings are included for this audience.");
             foreach (var f in system.Findings) Para(body, $"{f.Title} ({f.Severity}). {f.Description}");
-            Heading(body, "12. Information gaps and limitations", "Heading1");
+            Heading(body, "15. Information gaps and limitations", "Heading1");
             if (!model.IncludeGaps) Para(body, "Information gaps are omitted for this edition.");
             else
             {
@@ -470,8 +496,11 @@ public static class MarketScanDocument
         List<string> Database,
         List<string> Infrastructure,
         List<string> Integrations,
+        List<string> DataFlows,
         List<string> Data,
         List<string> Security,
+        List<string> Operations,
+        List<string> Limitations,
         List<FindingLine> Findings,
         List<GapLine> Gaps,
         List<string> Sources);

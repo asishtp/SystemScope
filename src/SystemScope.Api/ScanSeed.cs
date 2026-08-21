@@ -119,6 +119,8 @@ public static class MarketScanSeed
                     ("aquis", ScanDomainKind.Integrations) => "No confirmed AQUIS integrations have yet been documented. Potential relationships with Groundwater and public water-monitoring services require SME and technical validation.",
                     ("aquis", ScanDomainKind.DataQuality) => "No AQUIS data domains or quality assessments have yet been validated. The principal records, ownership, historical depth and migration considerations require further discovery.",
                     ("aquis", ScanDomainKind.Security) => "Detailed security assessment is deferred for the current market-scan scope. High-level identity, access, data protection and compliance information may still be recorded when evidence becomes available.",
+                    ("aquis", ScanDomainKind.Operations) => "Release, support, patching and operational procedures for AQUIS have not been confirmed. Support hours, monitoring and escalation paths require operational-owner validation.",
+                    ("aquis", ScanDomainKind.Limitations) => "AQUIS is a legacy Oracle Forms client/server application. Vendor support status, key-person dependency and replacement constraints remain to be confirmed.",
                     _ => "",
                 };
                 scan.Domains.Add(new ScanDomainState { Kind = kind, Requirement = requirement, Summary = summary });
@@ -254,6 +256,18 @@ public static class MarketScanSeed
         Fact(db, project, aquis, ScanDomainKind.Infrastructure, "Application servers", "Unknown", ValidationStatus.Captured, ClaimType.Unknown, "Low", null, "", "");
         Fact(db, project, aquis, ScanDomainKind.Infrastructure, "Network zones", "To be confirmed", ValidationStatus.Captured, ClaimType.Unknown, "Low", null, "", "");
         Fact(db, project, aquis, ScanDomainKind.Infrastructure, "Infrastructure owner", "Unknown", ValidationStatus.Captured, ClaimType.Unknown, "Low", null, "", "");
+        Fact(db, project, aquis, ScanDomainKind.Operations, "Release process", "Unknown", ValidationStatus.Captured, ClaimType.Unknown, "Low", null, "", "");
+        Fact(db, project, aquis, ScanDomainKind.Operations, "Support model", "To be confirmed", ValidationStatus.Captured, ClaimType.Unknown, "Low", null, "", "");
+        Fact(db, project, aquis, ScanDomainKind.Operations, "Support hours", "Unknown", ValidationStatus.Captured, ClaimType.Unknown, "Low", null, "", "");
+        Fact(db, project, aquis, ScanDomainKind.Operations, "Patching process", "Unknown", ValidationStatus.Captured, ClaimType.Unknown, "Low", null, "", "");
+        Fact(db, project, aquis, ScanDomainKind.Operations, "Monitoring", "Unknown", ValidationStatus.Captured, ClaimType.Unknown, "Low", null, "", "");
+        Fact(db, project, aquis, ScanDomainKind.Operations, "Escalation path", "Unknown", ValidationStatus.Captured, ClaimType.Unknown, "Low", null, "", "");
+        Fact(db, project, aquis, ScanDomainKind.Limitations, "Known limitations", "Legacy Oracle Forms client/server", ValidationStatus.AnalystReviewed, ClaimType.Inference, "Medium", notes, "Described as an internal legacy application.", "Architecture notes");
+        Fact(db, project, aquis, ScanDomainKind.Limitations, "Technical debt", "Unknown", ValidationStatus.Captured, ClaimType.Unknown, "Low", null, "", "");
+        Fact(db, project, aquis, ScanDomainKind.Limitations, "Vendor support status", "To be confirmed", ValidationStatus.Captured, ClaimType.Unknown, "Low", null, "", "");
+        Fact(db, project, aquis, ScanDomainKind.Limitations, "Key-person dependency", "To be confirmed", ValidationStatus.Captured, ClaimType.Unknown, "Low", null, "", "");
+        Fact(db, project, aquis, ScanDomainKind.Limitations, "Legacy dependencies", "Oracle Forms; inferred Oracle Database", ValidationStatus.AnalystReviewed, ClaimType.Inference, "Medium", transcript, "Inferred from Oracle Forms front end.", "00:23");
+        Fact(db, project, aquis, ScanDomainKind.Limitations, "Replacement constraints", "Unknown", ValidationStatus.Captured, ClaimType.Unknown, "Low", null, "", "");
         Fact(db, project, aquis, ScanDomainKind.Infrastructure, "End-of-life infrastructure", "Unknown", ValidationStatus.Captured, ClaimType.Unknown, "Low", null, "", "");
         Fact(db, project, aquis, ScanDomainKind.Infrastructure, "Application delivery", "Unknown", ValidationStatus.Captured, ClaimType.Unknown, "Low", null, "", "");
         Fact(db, project, aquis, ScanDomainKind.Infrastructure, "External support", "Unknown", ValidationStatus.Captured, ClaimType.Unknown, "Low", null, "", "");
@@ -436,6 +450,12 @@ public static class MarketScanSeed
             (ScanDomainKind.Security, "Confirm encryption and audit logging", "Protective controls are unknown.", Priority.Could, "Security appendix deferred."),
             (ScanDomainKind.Security, "Identify data classification and privacy obligations", "Obligations are unconfirmed.", Priority.Could, "Security appendix deferred."),
             (ScanDomainKind.Security, "Confirm records retention requirements", "Retention is unconfirmed.", Priority.Could, "Security appendix deferred."),
+            (ScanDomainKind.Operations, "Document the release and change process", "Deployment procedure is unknown.", Priority.Should, "Operations chapter cannot be completed."),
+            (ScanDomainKind.Operations, "Confirm support model and hours", "Support arrangements are unknown.", Priority.Must, "Operational procedures incomplete."),
+            (ScanDomainKind.Operations, "Identify patching, monitoring and escalation", "Runbooks are not recorded.", Priority.Should, "Operations appendix empty."),
+            (ScanDomainKind.Limitations, "Confirm vendor support and end-of-life status", "Oracle Forms support window is unknown.", Priority.Must, "Legacy-risk section incomplete."),
+            (ScanDomainKind.Limitations, "Identify key-person and replacement constraints", "Key-person risk is unconfirmed.", Priority.Should, "Limitations chapter incomplete."),
+            (ScanDomainKind.Limitations, "Catalogue remaining legacy dependencies", "Dependency list is inferred only.", Priority.Should, "Replacement planning blocked."),
         };
         foreach (var gap in gapItems)
         {
@@ -613,7 +633,7 @@ public static class MarketScanSeed
             false,
             true,
             ["Unvalidated current-state statements are labelled."],
-            [new MarketScanDocument.SystemSection(aquis.Name, aquis.Description, ["Front-end technology: Oracle Forms."], ["Database product: Oracle Database (inferred)."], ["Hosting location is to be confirmed."], ["Relationships with Groundwater remain unconfirmed."], ["Not assessed."], ["Deferred by current scope."], [], [new MarketScanDocument.GapLine("Database version not confirmed", "Open", "Blocks database chapter")], ["AQUIS walkthrough transcript"])]);
+            [new MarketScanDocument.SystemSection(aquis.Name, aquis.Description, ["Front-end technology: Oracle Forms."], ["Database product: Oracle Database (inferred)."], ["Hosting location is to be confirmed."], ["Relationships with Groundwater remain unconfirmed."], ["Batch and data-flow processing is not yet confirmed."], ["Not assessed."], ["Deferred by current scope."], ["Support and release procedures are not documented."], ["Legacy Oracle Forms client/server; replacement constraints unknown."], [], [new MarketScanDocument.GapLine("Database version not confirmed", "Open", "Blocks database chapter")], ["AQUIS walkthrough transcript"])]);
         var bytes = MarketScanDocument.Word(model);
         var checksum = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes));
         GeneratedDocument Doc(string version, string format, string status, DateTimeOffset at, string activity) => new()

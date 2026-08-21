@@ -34,6 +34,7 @@ function parseHash(){
   if(head==='assessments'){
     let scanTab=parts[2];
     if(parts[2]==='data-quality')scanTab='data';
+    if(parts[2]==='data-flows')scanTab='dataflows';
     if(parts[2]==='evidence'&&parts[3]==='new')scanTab='evidence-new';
     if(parts[2]==='evidence'&&parts[3]==='claims-review')scanTab='claims-review';
     return {view:'Assessments',scanKey:parts[1],scanTab,scanVersion:undefined as string|undefined,scanQuery:undefined as string|undefined};

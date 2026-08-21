@@ -367,7 +367,7 @@ public class DocumentComment : Record
 }
 
 public enum StateClassification { Current, Future }
-public enum ScanDomainKind { Architecture, Database, Infrastructure, Integrations, DataQuality, Security }
+public enum ScanDomainKind { Architecture, Database, Infrastructure, Integrations, DataQuality, Security, Operations, Limitations }
 public enum DomainRequirement { Required, Optional, Deferred }
 public enum ValidationStatus { Captured, AiExtracted, AnalystReviewed, SmeReviewRequested, SmeValidated, TechnicalReviewed, SecurityReviewed, Approved, DocumentReady, Published }
 public enum ClaimType { ExplicitStatement, Inference, Assumption, Unknown, Conflict }

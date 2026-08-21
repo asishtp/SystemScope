@@ -532,6 +532,12 @@ public static class ScanApi
                 var includedGaps = i.IncludeGaps
                     ? gaps.Where(g => g.Status != GapStatus.NotApplicable).Select(g => new MarketScanDocument.GapLine(g.MissingInformation, g.Status.ToString(), g.MarketScanImpact)).ToList()
                     : [];
+                var flowLines = (await db.DataFlows.Where(x => x.AssessedSystemId == system.Id && !x.Archived).ToListAsync())
+                    .Select(f => $"Data flow {f.DataSet}: {f.Source} → {f.Destination} ({f.State}).").ToList();
+                flowLines.AddRange((await db.BatchProcesses.Where(x => x.AssessedSystemId == system.Id && !x.Archived).ToListAsync())
+                    .Select(b => $"Batch process {b.Name}: schedule {(string.IsNullOrWhiteSpace(b.Schedule) ? "unknown" : b.Schedule)}, owner {(string.IsNullOrWhiteSpace(b.OperationalOwner) ? "unknown" : b.OperationalOwner)}."));
+                if (flowLines.Count == 0)
+                    flowLines.Add("Batch processes and data flows have not been confirmed. Unknown processing is an information gap, not a negative finding.");
                 sections.Add(new MarketScanDocument.SystemSection(
                     system.Name,
                     string.IsNullOrWhiteSpace(system.Description) ? $"{system.Name} is in scope. Detailed purpose requires further validation." : system.Description,
@@ -539,8 +545,11 @@ public static class ScanApi
                     Block(ScanDomainKind.Database),
                     Block(ScanDomainKind.Infrastructure),
                     Block(ScanDomainKind.Integrations),
+                    flowLines,
                     Block(ScanDomainKind.DataQuality),
                     Block(ScanDomainKind.Security),
+                    Block(ScanDomainKind.Operations),
+                    Block(ScanDomainKind.Limitations),
                     includedFindings,
                     includedGaps,
                     evidence.Select(e => $"{e.Title} ({e.SourceType}, {e.Completeness}, {e.Source})").ToList()));

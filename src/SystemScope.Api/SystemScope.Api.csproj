@@ -21,8 +21,15 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.10" />
   </ItemGroup>
 
-  <Target Name="BuildClient" BeforeTargets="Publish" Condition="'$(SkipClientBuild)' != 'true'">
+  <Target Name="RestoreClientDependencies"
+          Condition="'$(SkipClientBuild)' != 'true' And !Exists('..\systemscope-web\node_modules\typescript\bin\tsc')">
     <Exec WorkingDirectory="..\systemscope-web" Command="npm ci" />
+  </Target>
+
+  <Target Name="BuildClient"
+          BeforeTargets="Publish"
+          DependsOnTargets="RestoreClientDependencies"
+          Condition="'$(SkipClientBuild)' != 'true'">
     <Exec WorkingDirectory="..\systemscope-web" Command="npm run build" />
   </Target>
 

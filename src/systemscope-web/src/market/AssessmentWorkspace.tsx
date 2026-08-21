@@ -23,6 +23,8 @@ const CARD_SUMMARY: Record<string, string> = {
   Integrations: 'Relationships unconfirmed',
   DataQuality: 'Not yet assessed',
   Security: 'Deferred by current scope',
+  Operations: 'Support procedures unknown',
+  Limitations: 'Legacy Oracle Forms dependency',
 };
 
 const KIND_BY_TAB: Record<string, string> = {
@@ -30,8 +32,11 @@ const KIND_BY_TAB: Record<string, string> = {
   database: 'Database',
   infrastructure: 'Infrastructure',
   integrations: 'Integrations',
+  dataflows: 'Integrations',
   data: 'DataQuality',
   security: 'Security',
+  operations: 'Operations',
+  limitations: 'Limitations',
 };
 
 export function AssessmentWorkspace({
@@ -125,7 +130,7 @@ export function AssessmentWorkspace({
       </>}
 
       {tab === 'overview' && <Overview data={data} gaps={gaps} onOpen={openTab} onEvidence={addEvidence} />}
-      {KIND_BY_TAB[tab] && <DomainTab data={data} kind={KIND_BY_TAB[tab]} onBack={() => openTab('overview')} onEvidence={addEvidence} onOpenMap={() => openTab('diagrams')} onSaved={async m => { onNotice(m); await load(); }} />}
+      {KIND_BY_TAB[tab] && <DomainTab data={data} kind={KIND_BY_TAB[tab]} variant={tab} onBack={() => openTab('overview')} onEvidence={addEvidence} onOpenMap={() => openTab('diagrams')} onSaved={async m => { onNotice(m); await load(); }} />}
       {tab === 'findings' && <FindingsTab data={data} />}
       {tab === 'evidence' && <EvidenceTab data={data} onAdd={addEvidence} />}
       {tab === 'validation' && <ValidationTab data={data} onSaved={async m => { onNotice(m); await load(); }} />}
@@ -177,18 +182,33 @@ function Overview({ data, gaps, onOpen, onEvidence }: { data: ScanWorkspace; gap
   return (
     <div className="scan-overview">
       <div className="domain-grid">
-        {data.domains.map(d => (
-          <button className="domain-card" key={d.kind} onClick={() => onOpen(DOMAIN_TAB[d.kind] ?? 'overview')}>
-            <div className="domain-icon">{DOMAIN_ICON[d.kind]}</div>
-            <div className="domain-body">
-              <h3>{d.title}</h3>
-              <div className="bar"><i style={{ width: `${d.completeness}%` }} /></div>
-              <span className="pct">{d.completeness}%</span>
-              <p>{CARD_SUMMARY[d.kind] ?? d.summary ?? (d.requirement === 'Deferred' ? 'Deferred by current scope' : 'Not yet assessed')}</p>
-              <div className="domain-foot"><span>Evidence: {d.evidenceCount}</span><span>Gaps: {d.gapCount}</span></div>
-            </div>
-          </button>
-        ))}
+        {data.domains.flatMap(d => {
+          const card = (
+            <button className="domain-card" key={d.kind} onClick={() => onOpen(DOMAIN_TAB[d.kind] ?? 'overview')}>
+              <div className="domain-icon">{DOMAIN_ICON[d.kind]}</div>
+              <div className="domain-body">
+                <h3>{d.title}</h3>
+                <div className="bar"><i style={{ width: `${d.completeness}%` }} /></div>
+                <span className="pct">{d.completeness}%</span>
+                <p>{CARD_SUMMARY[d.kind] ?? d.summary ?? (d.requirement === 'Deferred' ? 'Deferred by current scope' : 'Not yet assessed')}</p>
+                <div className="domain-foot"><span>Evidence: {d.evidenceCount}</span><span>Gaps: {d.gapCount}</span></div>
+              </div>
+            </button>
+          );
+          if (d.kind !== 'Integrations') return [card];
+          return [card, (
+            <button className="domain-card" key="dataflows" onClick={() => onOpen('dataflows')}>
+              <div className="domain-icon">⟳</div>
+              <div className="domain-body">
+                <h3>Data flows & batch processes</h3>
+                <div className="bar"><i style={{ width: `${d.completeness}%` }} /></div>
+                <span className="pct">{d.completeness}%</span>
+                <p>Scheduled processing unconfirmed</p>
+                <div className="domain-foot"><span>Flows: {data.flows.length}</span><span>Batches: {data.batches.length}</span></div>
+              </div>
+            </button>
+          )];
+        })}
       </div>
       <aside className="scan-side">
         <section className="panel">
@@ -228,10 +248,11 @@ function factStatus(fact?: ScanFact, value?: string) {
   return { label: fact?.validation ?? 'Captured', cls: 'pill mute' };
 }
 
-function DomainTab({ data, kind, onBack, onEvidence, onOpenMap, onSaved }: { data: ScanWorkspace; kind: string; onBack: () => void; onEvidence: () => void; onOpenMap: () => void; onSaved: (m: string) => void }) {
+function DomainTab({ data, kind, variant, onBack, onEvidence, onOpenMap, onSaved }: { data: ScanWorkspace; kind: string; variant?: string; onBack: () => void; onEvidence: () => void; onOpenMap: () => void; onSaved: (m: string) => void }) {
   const domain = data.domains.find(d => d.kind === kind);
   const facts = data.facts.filter(f => f.domain === kind);
-  const copy = COPY[kind];
+  const tabVariant = variant ?? '';
+  const copy = tabVariant === 'dataflows' ? COPY.DataFlows : COPY[kind];
   const fields = copy.fields;
   const gaps = data.gaps.filter(g => g.domain === kind && g.status !== 'NotApplicable');
   const [draft, setDraft] = useState<Record<string, string>>({});
@@ -276,6 +297,8 @@ function DomainTab({ data, kind, onBack, onEvidence, onOpenMap, onSaved }: { dat
     Integrations: ['walkthrough', 'drill'],
     DataQuality: ['quality', 'data domain'],
     Security: ['security', 'identity'],
+    Operations: ['support', 'patch', 'release'],
+    Limitations: ['legacy', 'risk', 'limitation'],
   };
   const hints = evidenceHints[kind] ?? [];
   const evidence = data.evidence.filter(e => hints.some(h => `${e.title} ${e.sourceType}`.toLowerCase().includes(h))).slice(0, 3);
@@ -344,15 +367,18 @@ function DomainTab({ data, kind, onBack, onEvidence, onOpenMap, onSaved }: { dat
               <OpsRow title="Operational resilience" items={[['Monitoring', factVal(facts, 'Monitoring and logging')], ['High availability', factVal(facts, 'Availability arrangement')], ['Backup', factVal(facts, 'Backup and recovery')], ['RTO / RPO', factVal(facts, 'RTO')]]} />
             </>
           )}
-          {kind === 'Integrations' && (
+          {kind === 'Integrations' && tabVariant !== 'dataflows' && (
+            <RecordPanel title="Integration catalogue" action="＋ Add integration" extra={<button className="ghost compact" type="button" onClick={onOpenMap}>Open integration map</button>} rows={data.integrations as unknown as Record<string, unknown>[]} cols={[['sourceSystem', 'Source'], ['target', 'Destination'], ['businessPurpose', 'Purpose'], ['method', 'Method'], ['frequency', 'Frequency'], ['state', 'Status']]} statusKey="state" onAdd={() => setAdding('integration')} />
+          )}
+          {kind === 'Integrations' && tabVariant === 'dataflows' && (
             <>
-              <RecordPanel title="Integration catalogue" action="＋ Add integration" extra={<button className="ghost compact" type="button" onClick={onOpenMap}>Open integration map</button>} rows={data.integrations as unknown as Record<string, unknown>[]} cols={[['sourceSystem', 'Source'], ['target', 'Destination'], ['businessPurpose', 'Purpose'], ['method', 'Method'], ['frequency', 'Frequency'], ['state', 'Status']]} statusKey="state" onAdd={() => setAdding('integration')} />
               <RecordPanel title="Data flows" action="＋ Add data flow" rows={data.flows} cols={[['dataSet', 'Flow'], ['source', 'From'], ['destination', 'To'], ['state', 'Status']]} statusKey="state" onAdd={() => setAdding('flow')} />
               <RecordPanel title="Batch processes" action="＋ Add batch process" rows={data.batches} cols={[['name', 'Process'], ['schedule', 'Schedule'], ['input', 'Input'], ['output', 'Output'], ['operationalOwner', 'Owner']]} statusKey="validation" onAdd={() => setAdding('batch')} />
             </>
           )}
           {kind === 'DataQuality' && (
             <>
+              <RecordPanel title="Data models, schemas and relationships" action="＋ Add data domain" extra={<button className="ghost compact" type="button" onClick={onOpenMap}>Open ER diagram</button>} rows={data.dataDomains} cols={[['name', 'Entity / schema'], ['principalEntities', 'Related entities'], ['authoritativeSystem', 'Authoritative'], ['dataOwner', 'Owner']]} statusKey="completeness" onAdd={() => setAdding('datadomain')} />
               <RecordPanel title="Data domain register" action="＋ Add data domain" extra={<button className="ghost compact" type="button" onClick={() => setAdding('datadomain')}>Import inventory</button>} rows={data.dataDomains} cols={[['name', 'Data domain'], ['businessDescription', 'Description'], ['authoritativeSystem', 'Authoritative'], ['dataOwner', 'Owner'], ['approximateVolume', 'Volume']]} statusKey="completeness" onAdd={() => setAdding('datadomain')} />
               <RecordPanel title="Data quality assessment" action="＋ Assess data quality" rows={data.dataDomains} cols={[['name', 'Data domain'], ['completeness', 'Completeness'], ['accuracy', 'Accuracy'], ['consistency', 'Consistency'], ['timeliness', 'Timeliness']]} statusKey="completeness" onAdd={() => setAdding('datadomain')} />
               <OpsRow title="Migration considerations" items={[['Historical depth', factVal(facts, 'Historical depth')], ['Retention', factVal(facts, 'Retention')], ['Attachments', 'Unknown'], ['Data profiling', 'Not performed']]} />
@@ -364,6 +390,9 @@ function DomainTab({ data, kind, onBack, onEvidence, onOpenMap, onSaved }: { dat
               <RecordPanel title="Data protection & operational security" action="＋ Add security control" rows={data.security.filter(s => String(s.area) === 'Data protection')} cols={[['name', 'Control'], ['description', 'Implementation'], ['status', 'Assessment']]} statusKey="status" onAdd={() => setAdding('security')} />
               <RecordPanel title="Compliance obligations" action="＋ Add obligation" rows={data.security.filter(s => String(s.area) === 'Compliance')} cols={[['name', 'Obligation'], ['description', 'Applicability']]} onAdd={() => setAdding('obligation')} />
             </>
+          )}
+          {kind === 'Limitations' && (
+            <RecordPanel title="Findings, risks and legacy dependencies" action="" rows={data.findings as unknown as Record<string, unknown>[]} cols={[['title', 'Finding / limitation'], ['type', 'Type'], ['severity', 'Severity'], ['owner', 'Owner']]} statusKey="reviewState" />
           )}
           {adding && <AddRecord kind={adding} data={data} onCancel={() => setAdding(null)} onDone={async label => { setAdding(null); onSaved(label); }} />}
           <div className="domain-foot-actions">
@@ -428,8 +457,8 @@ const COPY: Record<string, { pageTitle: string; intro: string; crumb: string; su
     requestLabel: 'Request SME validation',
   },
   Database: {
-    pageTitle: 'Database architecture',
-    intro: 'Capture the database platform, schemas, business logic, jobs and operational dependencies.',
+    pageTitle: 'Oracle Forms and database architecture',
+    intro: 'Capture the Oracle Forms / database platform, schemas, business logic, jobs and operational dependencies.',
     crumb: 'Database',
     summaryTitle: 'Database summary',
     fieldTitle: 'Database platform',
@@ -439,7 +468,7 @@ const COPY: Record<string, { pageTitle: string; intro: string; crumb: string; su
     requestLabel: 'Request DBA validation',
   },
   Infrastructure: {
-    pageTitle: 'Infrastructure & hosting',
+    pageTitle: 'Infrastructure, hosting and environment details',
     intro: 'Capture high-level hosting, environments, infrastructure dependencies and operational resilience.',
     crumb: 'Infrastructure',
     summaryTitle: 'Infrastructure summary',
@@ -450,8 +479,8 @@ const COPY: Record<string, { pageTitle: string; intro: string; crumb: string; su
     requestLabel: 'Request infrastructure validation',
   },
   Integrations: {
-    pageTitle: 'Integrations, data flows & batch processes',
-    intro: 'Identify upstream and downstream systems, interfaces, information exchanges and scheduled processing.',
+    pageTitle: 'Interfaces and integrations with other systems',
+    intro: 'Identify upstream and downstream systems, interfaces and information exchanges.',
     crumb: 'Integrations',
     summaryTitle: 'Integration summary',
     fieldTitle: 'Current-state notes',
@@ -461,8 +490,8 @@ const COPY: Record<string, { pageTitle: string; intro: string; crumb: string; su
     requestLabel: 'Request integration validation',
   },
   DataQuality: {
-    pageTitle: 'Data structures & data quality',
-    intro: 'Capture key data domains, ownership, volumes, quality observations and migration considerations.',
+    pageTitle: 'Data models, schemas and data quality',
+    intro: 'Capture data models, entity relationships, schemas, ownership, volumes, quality and migration considerations.',
     crumb: 'Data and quality',
     summaryTitle: 'Data summary',
     fieldTitle: 'Data quality ratings',
@@ -472,7 +501,7 @@ const COPY: Record<string, { pageTitle: string; intro: string; crumb: string; su
     requestLabel: 'Request data owner validation',
   },
   Security: {
-    pageTitle: 'Security controls & compliance',
+    pageTitle: 'Security architecture, access controls and compliance',
     intro: 'Capture identity, access, data protection, operational security and applicable compliance obligations.',
     crumb: 'Security',
     summaryTitle: 'Security summary',
@@ -481,6 +510,39 @@ const COPY: Record<string, { pageTitle: string; intro: string; crumb: string; su
     labels: { Authentication: 'Authentication method', 'Role-based access': 'Role-based access', 'Privileged access': 'Privileged access review' },
     validationDefault: 'Deferred by scope',
     requestLabel: 'Request security review',
+  },
+  Operations: {
+    pageTitle: 'Deployment, support and operational procedures',
+    intro: 'Capture how the system is released, supported, patched, monitored and escalated in production.',
+    crumb: 'Operations',
+    summaryTitle: 'Operations summary',
+    fieldTitle: 'Support and run procedures',
+    fields: ['Release process', 'Support model', 'Support hours', 'Patching process', 'Monitoring', 'Escalation path'],
+    labels: {},
+    validationDefault: 'Not assessed',
+    requestLabel: 'Request operations validation',
+  },
+  Limitations: {
+    pageTitle: 'Technical limitations, risks and legacy dependencies',
+    intro: 'Record known constraints, technical debt, vendor support risk, key-person dependency and replacement limits.',
+    crumb: 'Limitations',
+    summaryTitle: 'Limitations summary',
+    fieldTitle: 'Known constraints',
+    fields: ['Known limitations', 'Technical debt', 'Vendor support status', 'Key-person dependency', 'Legacy dependencies', 'Replacement constraints'],
+    labels: {},
+    validationDefault: 'Unvalidated',
+    requestLabel: 'Request risk validation',
+  },
+  DataFlows: {
+    pageTitle: 'Data flows and batch processes',
+    intro: 'Identify information exchanges, storage points, scheduled jobs and overnight processing.',
+    crumb: 'Data flows',
+    summaryTitle: 'Processing summary',
+    fieldTitle: 'Current-state notes',
+    fields: [],
+    labels: {},
+    validationDefault: 'Unvalidated',
+    requestLabel: 'Request processing validation',
   },
 };
 
@@ -676,7 +738,9 @@ function DiagramsTab({ data }: { data: ScanWorkspace }) {
   const current = data.integrations.filter(i => i.state !== 'Future');
   const future = data.integrations.filter(i => i.state === 'Future');
   const nodes = Array.from(new Set([data.system.name, ...data.integrations.flatMap(i => [i.sourceSystem || data.system.name, i.target])])).filter(Boolean);
+  const entities = data.dataDomains.slice(0, 6);
   return (
+    <>
     <section className="panel pad-form">
       <div className="panel-title"><div><h2>Context diagram</h2><p>Generated from structured integration records. Confirmed, unconfirmed and future-state relationships are distinguished.</p></div></div>
       <svg className="context-svg" viewBox="0 0 720 320" role="img" aria-label="System context diagram">
@@ -698,6 +762,24 @@ function DiagramsTab({ data }: { data: ScanWorkspace }) {
       </svg>
       <p className="hint">{current.length} current-state relationship(s). {future.length} future-state item(s) are not treated as current facts.</p>
     </section>
+    <section className="panel pad-form">
+      <div className="panel-title"><div><h2>Data model / entity relationships</h2><p>Generated from recorded data domains. Empty domains remain labelled as not assessed.</p></div></div>
+      {entities.length ? (
+        <svg className="context-svg" viewBox={`0 0 ${Math.max(720, entities.length * 140)} 180`} role="img" aria-label="Entity relationship sketch">
+          {entities.map((e, i) => {
+            const x = 20 + i * 140;
+            return (
+              <g key={e.id}>
+                <rect x={x} y="50" width="120" height="70" rx="8" fill="#fff" stroke="#167b70" />
+                <text x={x + 60} y="90" textAnchor="middle" fontSize="11" fill="#314b49">{e.name}</text>
+                {i < entities.length - 1 && <line x1={x + 120} y1="85" x2={x + 140} y2="85" stroke="#9bb7b2" />}
+              </g>
+            );
+          })}
+        </svg>
+      ) : <p className="hint">No data domains recorded yet. Add entities on the data-quality assessment to populate this diagram.</p>}
+    </section>
+    </>
   );
 }
 

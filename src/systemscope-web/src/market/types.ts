@@ -133,7 +133,11 @@ export type ScanWorkspace = {
   }[];
   flows: Record<string, unknown>[];
   batches: Record<string, unknown>[];
-  dataDomains: Record<string, unknown>[];
+  dataDomains: {
+    id: string;
+    name: string;
+    [key: string]: unknown;
+  }[];
   security: Record<string, unknown>[];
   documents: { id: string; title: string; audience: string; status: string; createdAt: string; fileName: string; warnings: string }[];
   requiredAttributes: Record<string, string[]>;
@@ -196,8 +200,11 @@ export const TABS = [
   { id: 'database', label: 'Database' },
   { id: 'infrastructure', label: 'Infrastructure' },
   { id: 'integrations', label: 'Integrations' },
+  { id: 'dataflows', label: 'Data flows' },
   { id: 'data', label: 'Data and quality' },
   { id: 'security', label: 'Security' },
+  { id: 'operations', label: 'Operations' },
+  { id: 'limitations', label: 'Limitations' },
   { id: 'evidence-new', label: 'Add evidence' },
   { id: 'claims-review', label: 'Claims review' },
   { id: 'findings', label: 'Findings and risks' },
@@ -216,6 +223,8 @@ export const DOMAIN_TAB: Record<string, TabId> = {
   Integrations: 'integrations',
   DataQuality: 'data',
   Security: 'security',
+  Operations: 'operations',
+  Limitations: 'limitations',
 };
 
 export const DOMAIN_ICON: Record<string, string> = {
@@ -225,6 +234,8 @@ export const DOMAIN_ICON: Record<string, string> = {
   Integrations: '⇄',
   DataQuality: '▦',
   Security: '🛡',
+  Operations: '⚙',
+  Limitations: '⚠',
 };
 
 export function openGap(status: string) {

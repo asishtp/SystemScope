@@ -3,12 +3,14 @@ import { describe, it } from 'node:test';
 import { openGap, readinessLabel } from './types.ts';
 
 const weights = [
-  ['Architecture', 25],
-  ['Database', 20],
-  ['Infrastructure', 15],
-  ['Integrations', 20],
+  ['Architecture', 20],
+  ['Database', 15],
+  ['Infrastructure', 10],
+  ['Integrations', 15],
   ['DataQuality', 10],
   ['Security', 10],
+  ['Operations', 10],
+  ['Limitations', 10],
 ] as const;
 
 function informationScore(domains: { kind: string; completeness: number; requirement: string }[]) {
@@ -24,7 +26,7 @@ function informationScore(domains: { kind: string; completeness: number; require
 }
 
 describe('market-scan scoring', () => {
-  it('weights the six market-scan domains to 100%', () => {
+  it('weights the market-scan domains to 100%', () => {
     assert.equal(weights.reduce((sum, [, w]) => sum + w, 0), 100);
   });
 
@@ -36,8 +38,10 @@ describe('market-scan scoring', () => {
       { kind: 'Integrations', completeness: 10, requirement: 'Required' },
       { kind: 'DataQuality', completeness: 0, requirement: 'Required' },
       { kind: 'Security', completeness: 0, requirement: 'Deferred' },
+      { kind: 'Operations', completeness: 0, requirement: 'Required' },
+      { kind: 'Limitations', completeness: 0, requirement: 'Required' },
     ]);
-    assert.equal(score, 17);
+    assert.equal(score, 13);
   });
 
   it('treats only live gap statuses as open', () => {
