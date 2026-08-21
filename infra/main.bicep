@@ -70,7 +70,13 @@ resource app 'Microsoft.Web/sites@2024-11-01' = {
         { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: insights.properties.ConnectionString }
         { name: 'AzureAd__TenantId', value: entraTenantId }
         { name: 'AzureAd__ClientId', value: entraClientId }
-        { name: 'ConnectionStrings__SystemScope', value: 'Server=tcp:${sqlServer.properties.fullyQualifiedDomainName},1433;Database=${database.name};Authentication=Active Directory Default;Encrypt=True;TrustServerCertificate=False;' }
+        { name: 'EntraId__TenantId', value: entraTenantId }
+        { name: 'AzureSql__Server', value: sqlServer.properties.fullyQualifiedDomainName }
+        { name: 'AzureSql__Database', value: database.name }
+        { name: 'AzureSql__AuthenticationMode', value: 'EntraId' }
+        { name: 'AzureSql__Encrypt', value: 'true' }
+        { name: 'AzureSql__TrustServerCertificate', value: 'false' }
+        { name: 'AzureSql__ConnectionTimeout', value: '30' }
       ]
     }
   }

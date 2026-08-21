@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../landscape/api';
-import { formatStamp } from './types';
+import { formatDate, formatStamp } from './types';
 import './market.css';
 
 type Comment = { id: string; sectionNumber: number; section: string; author: string; domain: string; text: string; status: string };
@@ -467,6 +467,171 @@ export function DocumentPublish({ catalogKey, version, onBack }: { catalogKey: s
         {result && <span className="pill">{result}</span>}
         <button className="ghost" disabled={busy} onClick={saveSettings}>Save publication settings</button>
         <button className="primary" disabled={busy || !approved} onClick={publish}>Publish document</button>
+      </footer>
+    </div>
+  );
+}
+
+type Published = {
+  id: string;
+  title: string;
+  recordId: string;
+  versionLabel: string;
+  publishedVersion: string;
+  status: string;
+  classification: string;
+  visibilityScope: string;
+  format: string;
+  pageCount: number;
+  fileSizeBytes: number;
+  checksumSha256: string;
+  retentionYears: number;
+  reviewDate?: string;
+  publishedAt?: string;
+  generatedBy: string;
+  approver: string;
+  publicationNote: string;
+  templateName: string;
+  assessmentSnapshot: string;
+  owner: string;
+  views: number;
+  downloads: number;
+  catalogKey: string;
+  systemName: string;
+  projectName: string;
+  findingCount: number;
+  evidenceCount: number;
+  activity: { at?: string; text?: string }[];
+  coverage: { area: string; status: string }[];
+  hits: { section: string; text: string; page: number; status: string }[];
+  overview: string;
+};
+
+export function PublishedRecord({ recordId, onBack, onOpenSystem }: { recordId: string; onBack: () => void; onOpenSystem: (key: string) => void }) {
+  const [doc, setDoc] = useState<Published>();
+  const [q, setQ] = useState('Oracle Forms');
+  const [error, setError] = useState('');
+  useEffect(() => {
+    api<Published>(`/documents/published/${encodeURIComponent(recordId)}`).then(setDoc).catch(e => setError(e.message));
+  }, [recordId]);
+  if (error) return <div className="empty"><p>{error}</p><button className="back" onClick={onBack}>← Documents</button></div>;
+  if (!doc) return <div className="empty"><p>Loading published record…</p></div>;
+  const hits = doc.hits.filter(h => !q || h.text.toLowerCase().includes(q.toLowerCase()) || h.section.toLowerCase().includes(q.toLowerCase()));
+  return (
+    <div className="scan published-page">
+      <header className="scan-head">
+        <div>
+          <small>WATER MONITORING SYSTEMS · PUBLISHED RECORD</small>
+          <h1>{doc.title}</h1>
+          <p>Published market-scan document and immutable records-management entry.</p>
+          <p className="crumb">Documents / Published / {doc.recordId}</p>
+          <div className="scan-pills">
+            <span className="pill">Published</span>
+            <span className="pill">{doc.classification}</span>
+          </div>
+        </div>
+        <div className="scan-head-actions">
+          <button className="ghost">Copy link</button>
+          <button className="ghost">More</button>
+          <a className="primary" href={`/api/documents/${doc.id}/file`}>Download document</a>
+        </div>
+      </header>
+      <div className="notice">Published successfully. Version {doc.publishedVersion} was published {formatStamp(doc.publishedAt)} and is available to {doc.visibilityScope} users.</div>
+      <div className="scan-meta profile-meta">
+        <div><small>Version</small><b>{doc.publishedVersion}</b></div>
+        <div><small>Published</small><b>{formatDate(doc.publishedAt)}</b></div>
+        <div><small>Owner</small><b>{doc.owner}</b></div>
+        <div><small>Review due</small><b>{doc.reviewDate || '20 Feb 2027'}</b></div>
+        <div><small>Views</small><b>{doc.views}</b></div>
+        <div><small>Downloads</small><b>{doc.downloads}</b></div>
+      </div>
+      <div className="profile-grid published-grid">
+        <section className="panel pad-form">
+          <h3>Document</h3>
+          <b>{doc.title}</b>
+          <p className="hint">Published {doc.publishedVersion} · {doc.format} · {doc.pageCount} pages · {Math.round((doc.fileSizeBytes || 486000) / 1024)} KB</p>
+          <span className="pill">Published</span>
+          <div className="scan-head-actions">
+            <a className="primary" href={`/api/documents/${doc.id}/file`}>Download Word</a>
+            <button className="ghost">Download PDF</button>
+            <button className="ghost">Open read-only preview</button>
+          </div>
+          <div className="ops-grid">
+            <div><small>Record ID</small><b>{doc.recordId}</b></div>
+            <div><small>Assessment snapshot</small><b>{doc.assessmentSnapshot}</b></div>
+            <div><small>Template</small><b>{doc.templateName}</b></div>
+            <div><small>Checksum</small><b>SHA-256 verified</b></div>
+            <div><small>Retention</small><b>{doc.retentionYears} years</b></div>
+          </div>
+        </section>
+        <section className="panel pad-form">
+          <h3>Search within this document</h3>
+          <div className="search-box">
+            <input value={q} onChange={e => setQ(e.target.value)} />
+            <button className="primary" type="button">Search</button>
+          </div>
+          <p className="hint">{hits.length} matches across sections</p>
+          {hits.map(h => (
+            <div className="side-row stack" key={h.section + h.page}>
+              <span><b>{h.section}</b><small>{h.text}</small></span>
+              <span>Page {h.page}</span>
+            </div>
+          ))}
+        </section>
+        <section className="panel pad-form">
+          <h3>Document overview</h3>
+          <p>{doc.overview || 'This market-scan document provides an overview of the AQUIS Water Monitoring Systems market-scan and RFI activities. Unvalidated and inferred content remains labelled.'}</p>
+          <table className="mini-table">
+            <thead><tr><th>Assessment coverage</th><th>Status</th></tr></thead>
+            <tbody>
+              {(doc.coverage ?? []).map(c => <tr key={c.area}><td>{c.area}</td><td>{c.status}</td></tr>)}
+            </tbody>
+          </table>
+        </section>
+        <aside className="scan-side">
+          <section className="panel pad-form">
+            <h3>Access and visibility</h3>
+            <p>Visibility <b>{doc.visibilityScope}</b></p>
+            <p>Classification <b>{doc.classification}</b></p>
+            <p>Downloads <b>Authorised users</b></p>
+            <p>External sharing <b>Not allowed</b></p>
+            <p>Search indexing <b>Enabled</b></p>
+            <button className="ghost compact">Manage access</button>
+          </section>
+          <section className="panel pad-form">
+            <h3>Related {doc.systemName} records</h3>
+            <p>System profile <button className="linkish" onClick={() => onOpenSystem(doc.catalogKey)}>{doc.systemName}</button></p>
+            <p>Project <b>{doc.projectName}</b></p>
+            <p>Findings <b>{doc.findingCount} linked</b></p>
+            <p>Evidence <b>{doc.evidenceCount} linked</b></p>
+            <button className="ghost compact" onClick={() => onOpenSystem(doc.catalogKey)}>Open {doc.systemName} system profile</button>
+          </section>
+          <section className="panel pad-form">
+            <h3>Publication record</h3>
+            <p>Published by <b>{doc.generatedBy}</b></p>
+            <p>Approved by <b>{doc.approver || 'Michael'}</b></p>
+            <p>Published <b>{formatStamp(doc.publishedAt)}</b></p>
+            <p className="hint">{doc.publicationNote}</p>
+          </section>
+          <section className="panel pad-form">
+            <h3>Record lifecycle</h3>
+            <p>Status <b>Current</b></p>
+            <p>Next review <b>{doc.reviewDate || '20 Feb 2027'}</b></p>
+            <p>Retention until <b>20 Aug 2033</b></p>
+            <p>Superseded by <b>None</b></p>
+            <button className="ghost compact">Create new draft from this version</button>
+          </section>
+          <section className="panel">
+            <div className="panel-title"><div><h2>Recent activity</h2></div></div>
+            {(doc.activity ?? []).map((a, i) => <div className="side-row" key={i}><span>{a.text}</span></div>)}
+          </section>
+        </aside>
+      </div>
+      <footer className="docs-foot">
+        <span>{doc.recordId} · Published {doc.publishedVersion}</span>
+        <span className="hint">This published version is immutable.</span>
+        <button className="ghost" onClick={() => onOpenSystem(doc.catalogKey)}>Open system profile</button>
+        <a className="primary" href={`/api/documents/${doc.id}/file`}>Download Word document</a>
       </footer>
     </div>
   );

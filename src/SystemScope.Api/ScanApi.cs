@@ -483,6 +483,7 @@ public static class ScanApi
         {
             var doc = await db.GeneratedDocuments.FindAsync(id);
             if (doc is null) return Results.NotFound();
+            doc.DownloadCount++;
             await audit.Record(db, u, "Download", "GeneratedDocument", doc.Id, doc.Title, doc.ProjectId);
             await db.SaveChangesAsync();
             return Results.File(doc.FileBytes, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", doc.FileName);

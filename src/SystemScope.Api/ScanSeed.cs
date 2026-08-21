@@ -8,7 +8,13 @@ public static class MarketScanSeed
 
     public static async Task Apply(AppDbContext db)
     {
-        if (await db.Projects.AnyAsync(x => x.Name == ProjectName)) return;
+        var existing = await db.Projects.FirstOrDefaultAsync(x => x.Name == ProjectName);
+        if (existing is not null)
+        {
+            if (await db.GeneratedDocuments.AnyAsync(x => x.ProjectId == existing.Id && x.RecordId == "DOC-AQUIS-0001"))
+                return;
+            await RemoveIncomplete(db, existing.Id);
+        }
 
         var project = new Project
         {
@@ -27,8 +33,8 @@ public static class MarketScanSeed
 
         var specs = new (string Key, string Name, string Acronym, string Description, string Purpose, string Capabilities, string BusinessOwner, string TechnicalOwner, Criticality Crit, string Lifecycle, string Vendor, string Product, string Tags)[]
         {
-            ("aquis", "AQUIS", "AQUIS", "Internal water monitoring application used in groundwater and related operational processes. Acronym expansion is not yet confirmed.", "Water monitoring operational support. Business functions require SME confirmation.", "Groundwater-related operational records; relationship with Groundwater and drill-log processes requires clarification.", "To be confirmed", "Anthony McLoughlin", Criticality.High, "Active", "Oracle", "Oracle Forms application", "oracle-forms,legacy,rfi,water-monitoring"),
-            ("gwdb", "Groundwater Database", "GWDB", "Groundwater database with GWPlot and the Drill Log Receival and Notification system.", "Authoritative groundwater bore, water-level and drill-log records.", "Bores, water levels, water quality, drill logs, GWPlot.", "Groundwater", "Digital and ICT", Criticality.Critical, "Active", "Oracle", "Oracle Database", "groundwater,oracle,rfi"),
+            ("aquis", "AQUIS", "AQUIS", "AQUIS is an internal legacy application supporting Water Monitoring Systems. Available evidence confirms an Oracle Forms front end and suggests an Oracle Database. Detailed architecture, database configuration, hosting arrangements and system relationships require further validation.", "Water monitoring operational support. Business functions require SME confirmation.", "Groundwater-related operational records; relationship with Groundwater and drill-log processes requires clarification.", "To be confirmed", "Anthony McLoughlin", Criticality.Moderate, "Legacy / Maintain", "Oracle", "Oracle Forms application", "oracle-forms,legacy,rfi,water-monitoring"),
+            ("gwdb", "Groundwater", "GWDB", "Groundwater application using an Oracle Forms front end with GWPlot and the Drill Log Receival and Notification system.", "Authoritative groundwater bore, water-level and drill-log records.", "Bores, water levels, water quality, drill logs, GWPlot.", "Groundwater", "Digital and ICT", Criticality.Critical, "Active", "Oracle", "Oracle Forms / Oracle Database", "groundwater,oracle,oracle-forms,rfi"),
             ("hydstra", "Water Monitoring Information System — Hydstra", "WMS-Hydstra", "Time-series data management system with Hydrotel for gauge collection and distribution.", "Statewide time-series water monitoring.", "Gauge reads, time-series, Hydrotel collection.", "Water monitoring", "Digital and ICT", Criticality.Critical, "Active", "Kisters", "Hydstra / Hydrotel", "telemetry,rfi"),
             ("wfieldapp", "Water Monitoring Field Application", "WFieldApp", "Mobile field application returning groundwater sample metadata and results.", "Field capture for water monitoring samples.", "Sample metadata, field capture.", "Water monitoring", "Digital and ICT", Criticality.High, "Active", "", "Mobile field application", "field,rfi"),
             ("wasp", "Water Analysis Sample Program", "WASP", "Water analysis sample program supporting Power BI dashboards and feeding Hydstra and DES storage.", "Laboratory and sample program coordination.", "H2O samples, dashboards.", "Water monitoring", "Digital and ICT", Criticality.High, "Active", "", "Sample program", "samples,rfi"),
@@ -129,17 +135,42 @@ public static class MarketScanSeed
         foreach (var system in systems.Values) await ScanWorkspace.Recalculate(db, system.Id);
         SeedWorkflow(db, project, aquis);
 
-        db.AuditEvents.Add(new AuditEvent
-        {
-            ProjectId = project.Id,
-            ActorId = "seed",
-            ActorName = "SystemScope",
-            Action = "Create",
-            EntityType = "Project",
-            EntityId = project.Id,
-            Detail = "Seeded Water Monitoring Systems Market Scan 2026 with AQUIS example assessment",
-        });
+        db.AuditEvents.AddRange(
+            new AuditEvent { ProjectId = project.Id, ActorId = "seed", ActorName = "Asish Punnose", Action = "Publish", EntityType = "GeneratedDocument", EntityId = aquis.Id, Detail = "Assessment document v1.0 published", Timestamp = new DateTimeOffset(2026, 8, 20, 7, 31, 0, TimeSpan.FromHours(10)) },
+            new AuditEvent { ProjectId = project.Id, ActorId = "seed", ActorName = "Michael", Action = "Approve", EntityType = "GeneratedDocument", EntityId = aquis.Id, Detail = "Document approved by Michael", Timestamp = new DateTimeOffset(2026, 8, 20, 7, 26, 0, TimeSpan.FromHours(10)) },
+            new AuditEvent { ProjectId = project.Id, ActorId = "seed", ActorName = "Anthony McLoughlin", Action = "Validate", EntityType = "ValidationRequest", EntityId = aquis.Id, Detail = "SME validation applied", Timestamp = new DateTimeOffset(2026, 8, 20, 6, 42, 0, TimeSpan.FromHours(10)) },
+            new AuditEvent { ProjectId = project.Id, ActorId = "seed", ActorName = "Asish Punnose", Action = "Create", EntityType = "Evidence", EntityId = aquis.Id, Detail = "Walkthrough evidence added", Timestamp = new DateTimeOffset(2026, 8, 20, 4, 5, 0, TimeSpan.FromHours(10)) },
+            new AuditEvent { ProjectId = project.Id, ActorId = "seed", ActorName = "SystemScope", Action = "Create", EntityType = "Project", EntityId = project.Id, Detail = "Seeded Water Monitoring Systems Market Scan 2026 with AQUIS example assessment" });
         await db.SaveChangesAsync();
+    }
+
+    static async Task RemoveIncomplete(AppDbContext db, Guid projectId)
+    {
+        await db.ValidationItems.Where(x => db.ValidationRequests.Any(r => r.ProjectId == projectId && r.Id == x.ValidationRequestId)).ExecuteDeleteAsync();
+        await db.ValidationRequests.Where(x => x.ProjectId == projectId).ExecuteDeleteAsync();
+        await db.DocumentComments.Where(x => db.GeneratedDocuments.Any(d => d.ProjectId == projectId && d.Id == x.GeneratedDocumentId)).ExecuteDeleteAsync();
+        await db.GeneratedDocuments.Where(x => x.ProjectId == projectId).ExecuteDeleteAsync();
+        await db.Claims.Where(x => x.ProjectId == projectId).ExecuteDeleteAsync();
+        await db.InformationGaps.Where(x => x.ProjectId == projectId).ExecuteDeleteAsync();
+        await db.ScanFacts.Where(x => x.ProjectId == projectId).ExecuteDeleteAsync();
+        await db.ScanDomains.Where(x => db.ScanAssessments.Any(s => s.ProjectId == projectId && s.Id == x.ScanAssessmentId)).ExecuteDeleteAsync();
+        await db.ScanAssessments.Where(x => x.ProjectId == projectId).ExecuteDeleteAsync();
+        await db.Components.Where(x => x.ProjectId == projectId).ExecuteDeleteAsync();
+        await db.SystemDatabases.Where(x => x.ProjectId == projectId).ExecuteDeleteAsync();
+        await db.InfrastructureAssets.Where(x => x.ProjectId == projectId).ExecuteDeleteAsync();
+        await db.DataFlows.Where(x => x.ProjectId == projectId).ExecuteDeleteAsync();
+        await db.BatchProcesses.Where(x => x.ProjectId == projectId).ExecuteDeleteAsync();
+        await db.DataDomains.Where(x => x.ProjectId == projectId).ExecuteDeleteAsync();
+        await db.SecurityControls.Where(x => x.ProjectId == projectId).ExecuteDeleteAsync();
+        await db.Integrations.Where(x => x.ProjectId == projectId).ExecuteDeleteAsync();
+        await db.Findings.Where(x => x.ProjectId == projectId).ExecuteDeleteAsync();
+        await db.Actions.Where(x => x.ProjectId == projectId).ExecuteDeleteAsync();
+        await db.Evidence.Where(x => x.ProjectId == projectId).ExecuteDeleteAsync();
+        await db.AuditEvents.Where(x => x.ProjectId == projectId).ExecuteDeleteAsync();
+        var masterIds = await db.Systems.Where(x => x.ProjectId == projectId && x.MasterSystemId != null).Select(x => x.MasterSystemId!.Value).Distinct().ToListAsync();
+        await db.Systems.Where(x => x.ProjectId == projectId).ExecuteDeleteAsync();
+        await db.MasterSystems.Where(m => masterIds.Contains(m.Id) && !m.ProjectSystems.Any()).ExecuteDeleteAsync();
+        await db.Projects.Where(x => x.Id == projectId).ExecuteDeleteAsync();
     }
 
     static void SeedAquis(AppDbContext db, Project project, AssessedSystem aquis, AssessedSystem gwdb)
@@ -150,7 +181,7 @@ public static class MarketScanSeed
             SystemId = aquis.Id,
             Title = "AQUIS walkthrough transcript",
             Url = "https://department.sharepoint.com/sites/systemscope/evidence/aquis-walkthrough",
-            Source = "SME walkthrough",
+            Source = "SME walkthrough of Oracle Forms",
             SourceType = "Meeting transcript",
             Classification = "OFFICIAL",
             Validated = false,
@@ -158,8 +189,8 @@ public static class MarketScanSeed
             Reliability = "Medium",
             Confidentiality = "Internal",
             ProcessingStatus = "Registered",
-            Participants = "Anthony McLoughlin; water monitoring SME",
-            EvidenceDate = new DateOnly(2026, 8, 12),
+            Participants = "Anthony McLoughlin; Asish Punnose",
+            EvidenceDate = new DateOnly(2026, 8, 20),
         };
         var notes = new Evidence
         {
@@ -195,6 +226,7 @@ public static class MarketScanSeed
             transcript,
             notes,
             Extra("AQUIS Oracle Forms module list (partial)", "Screenshot", "Partial"),
+            Extra("AQUIS Oracle Forms walkthrough notes", "Walkthrough notes", "Partial"),
             Extra("AQUIS login screen capture", "Screenshot", "Complete"),
             Extra("Existing AQUIS support notes", "Existing assessments", "Partial"),
             Extra("Interface conversation extract", "Email", "Partial"),
@@ -204,7 +236,7 @@ public static class MarketScanSeed
             Extra("Database hosting assumption", "Existing assessments", "Indirect evidence"),
             Extra("Drill log discussion", "Email", "Future-state evidence"));
 
-        Fact(db, project, aquis, ScanDomainKind.Architecture, "Front-end technology", "Oracle Forms", ValidationStatus.AnalystReviewed, ClaimType.ExplicitStatement, "High", transcript, "AQUIS walkthrough transcript at 00:23", "00:23");
+        Fact(db, project, aquis, ScanDomainKind.Architecture, "Front-end technology", "Oracle Forms", ValidationStatus.SmeValidated, ClaimType.ExplicitStatement, "High", transcript, "AQUIS walkthrough transcript at 00:23", "00:23");
         Fact(db, project, aquis, ScanDomainKind.Architecture, "Architecture style", "Legacy client/server", ValidationStatus.AnalystReviewed, ClaimType.Inference, "Medium", notes, "Described as an internal legacy application.", "Architecture notes");
         Fact(db, project, aquis, ScanDomainKind.Architecture, "Back-end technology", "To be confirmed", ValidationStatus.Captured, ClaimType.Unknown, "Low", null, "", "");
         Fact(db, project, aquis, ScanDomainKind.Architecture, "Application server", "To be confirmed", ValidationStatus.Captured, ClaimType.Unknown, "Low", null, "", "");
@@ -305,7 +337,7 @@ public static class MarketScanSeed
                 Name = "AQUIS to Groundwater",
                 SourceSystem = "AQUIS",
                 Target = "Groundwater",
-                BusinessPurpose = "Relationship requires clarification. Do not treat as a confirmed current-state interface.",
+                BusinessPurpose = "AQUIS was described as similar to the Groundwater application; the technical dependency remains unconfirmed. Oracle Forms pattern.",
                 Direction = "Unknown",
                 InformationExchanged = "Unknown",
                 State = InformationState.Suspected,
@@ -357,61 +389,24 @@ public static class MarketScanSeed
             new InfrastructureAsset { ProjectId = project.Id, AssessedSystemId = aquis.Id, Name = "To be confirmed", OperatingSystem = "To be confirmed", EnvironmentName = "Production", HostingModel = "OnPremises", Validation = ValidationStatus.SmeReviewRequested },
             new InfrastructureAsset { ProjectId = project.Id, AssessedSystemId = aquis.Id, Name = "Unknown", OperatingSystem = "Unknown", EnvironmentName = "Disaster recovery", HostingModel = "OnPremises", Validation = ValidationStatus.Captured });
 
-        db.Claims.AddRange(
-            new ExtractedClaim
-            {
-                ProjectId = project.Id,
-                AssessedSystemId = aquis.Id,
-                Domain = ScanDomainKind.Architecture,
-                Statement = "AQUIS uses an Oracle Forms front end.",
-                Speaker = "Walkthrough participant",
-                EvidenceExcerpt = "AQUIS walkthrough transcript at 00:23",
-                SourceLocation = "00:23",
-                Confidence = "High",
-                ClaimType = ClaimType.ExplicitStatement,
-                Validation = ValidationStatus.SmeReviewRequested,
-                EvidenceId = transcript.Id,
-            },
-            new ExtractedClaim
-            {
-                ProjectId = project.Id,
-                AssessedSystemId = aquis.Id,
-                Domain = ScanDomainKind.Database,
-                Statement = "AQUIS is likely supported by Oracle Database.",
-                Speaker = "Analyst",
-                EvidenceExcerpt = "Inferred from Oracle Forms; independent evidence required.",
-                Confidence = "Medium",
-                ClaimType = ClaimType.Inference,
-                Validation = ValidationStatus.Captured,
-                EvidenceId = transcript.Id,
-            },
-            new ExtractedClaim
-            {
-                ProjectId = project.Id,
-                AssessedSystemId = aquis.Id,
-                Domain = ScanDomainKind.Integrations,
-                Statement = "AQUIS may share infrastructure or data with Groundwater.",
-                Confidence = "Low",
-                ClaimType = ClaimType.Unknown,
-                Validation = ValidationStatus.SmeReviewRequested,
-            });
-
         var gapItems = new (ScanDomainKind Domain, string Text, string Reason, Priority Priority, string Impact)[]
         {
             (ScanDomainKind.Architecture, "What does AQUIS stand for?", "System name and acronym must be confirmed for the market-scan overview.", Priority.Must, "Blocks executive summary wording."),
             (ScanDomainKind.Architecture, "What business functions does it support?", "Business purpose remains unconfirmed.", Priority.Must, "Blocks system overview."),
             (ScanDomainKind.Architecture, "Which Oracle Forms modules are used?", "Component inventory is incomplete.", Priority.Should, "Limits architecture section."),
-            (ScanDomainKind.Database, "Confirm Oracle version and schemas", "Database product is inferred only.", Priority.Must, "Database chapter cannot be completed."),
-            (ScanDomainKind.Database, "Which Oracle version, database and schemas support AQUIS?", "Instance, edition and schema list are unknown.", Priority.Must, "Database chapter cannot be completed."),
+            (ScanDomainKind.Database, "Confirm Oracle Database version and schemas", "Database product is inferred only.", Priority.Must, "Database chapter cannot be completed."),
+            (ScanDomainKind.Database, "Which Oracle version, database and schemas support AQUIS?", "Instance, edition and schema list are unknown.", Priority.Should, "Database chapter cannot be completed."),
             (ScanDomainKind.Integrations, "Does AQUIS share infrastructure or data with Groundwater?", "Related-system relationship is unconfirmed.", Priority.Must, "Integration landscape is unreliable."),
             (ScanDomainKind.Integrations, "Identify upstream and downstream systems", "Current-state interfaces are not catalogued.", Priority.Must, "Integration catalogue is empty of confirmed records."),
             (ScanDomainKind.Integrations, "What systems provide data to AQUIS?", "Inbound interfaces unknown.", Priority.Should, "Data-flow diagrams omitted."),
             (ScanDomainKind.Integrations, "What systems consume AQUIS data?", "Outbound interfaces unknown.", Priority.Should, "Data-flow diagrams omitted."),
             (ScanDomainKind.Integrations, "What batch processes and scheduled jobs operate?", "Overnight processing is unknown.", Priority.Should, "Operations appendix incomplete."),
             (ScanDomainKind.Infrastructure, "Where is AQUIS hosted?", "Hosting model and location are unknown.", Priority.Must, "Infrastructure chapter cannot be written."),
+            (ScanDomainKind.Infrastructure, "Identify hosting model and environments", "Hosting model and environment topology are unconfirmed.", Priority.Must, "Infrastructure chapter cannot be written."),
             (ScanDomainKind.Security, "What security and access controls apply?", "Deferred by current market-scan scope pending security review.", Priority.Could, "Security appendix deferred."),
             (ScanDomainKind.Architecture, "Transcript completeness is incomplete", "Major evidence gap: walkthrough transcript is incomplete.", Priority.Must, "Several architecture claims cannot be validated."),
-            (ScanDomainKind.Architecture, "Confirm Oracle Forms version", "Module and version inventory is incomplete.", Priority.Should, "Limits architecture section."),
+            (ScanDomainKind.Architecture, "Confirm Oracle Forms version", "Module and version inventory is incomplete.", Priority.Must, "Limits architecture section."),
+            (ScanDomainKind.Architecture, "Confirm business owner", "Business owner is not yet confirmed on the system record.", Priority.Must, "Ownership and contacts remain incomplete."),
             (ScanDomainKind.Architecture, "Identify application server", "Runtime hosting is unknown.", Priority.Should, "Limits architecture section."),
             (ScanDomainKind.Architecture, "Confirm business logic location", "Business-logic location is unknown.", Priority.Should, "Limits architecture section."),
             (ScanDomainKind.Architecture, "Identify reporting technology", "Reporting stack is unvalidated.", Priority.Should, "Limits architecture section."),
@@ -464,10 +459,102 @@ public static class MarketScanSeed
             {
                 ProjectId = project.Id,
                 SystemId = aquis.Id,
+                Type = FindingType.Observation,
+                Domain = ScanDomainKind.Architecture,
+                Title = "AQUIS uses Oracle Forms as its front-end technology",
+                Description = "Confirmed by Anthony McLoughlin from the AQUIS walkthrough transcript at 00:23. Oracle Forms is the current user-interface technology.",
+                Severity = Severity.Moderate,
+                Likelihood = 2,
+                Impact = 2,
+                Owner = "Anthony McLoughlin",
+                EvidenceId = transcript.Id,
+                Confidence = "High",
+                Validation = ValidationStatus.SmeValidated,
+                Recommendation = "Retain as a confirmed current-state fact in the market-scan document.",
+                IncludeInDocument = true,
+                ReviewState = ReviewState.Approved,
+            },
+            new Finding
+            {
+                ProjectId = project.Id,
+                SystemId = aquis.Id,
+                Type = FindingType.Observation,
+                Domain = ScanDomainKind.Architecture,
+                Title = "AQUIS is similar to Groundwater",
+                Description = "AQUIS was described as pretty much similar to Groundwater, with an Oracle Forms front end; the technical dependency remains unconfirmed.",
+                Severity = Severity.Moderate,
+                Likelihood = 3,
+                Impact = 2,
+                Owner = "Anthony McLoughlin",
+                EvidenceId = transcript.Id,
+                Confidence = "High",
+                Validation = ValidationStatus.AnalystReviewed,
+                Recommendation = "Validate the relationship with the Groundwater SME before treating it as a current-state interface.",
+                IncludeInDocument = true,
+                ReviewState = ReviewState.Approved,
+            },
+            new Finding
+            {
+                ProjectId = project.Id,
+                SystemId = aquis.Id,
+                Type = FindingType.InformationGap,
+                Domain = ScanDomainKind.Architecture,
+                Title = "Oracle Forms version is unconfirmed",
+                Description = "Oracle Forms is confirmed as the front end but the Forms version and module list remain an information gap.",
+                Severity = Severity.Moderate,
+                Likelihood = 3,
+                Impact = 2,
+                Owner = "Anthony McLoughlin",
+                EvidenceGapRationale = "Module list is partial.",
+                Confidence = "Medium",
+                Validation = ValidationStatus.Captured,
+                Recommendation = "Confirm Oracle Forms version with the technical owner.",
+                IncludeInDocument = true,
+            },
+            new Finding
+            {
+                ProjectId = project.Id,
+                SystemId = aquis.Id,
+                Type = FindingType.InformationGap,
+                Domain = ScanDomainKind.Database,
+                Title = "Confirm Oracle Database version and schemas",
+                Description = "Oracle Database is inferred from the Oracle Forms front end. Version, edition and schema ownership are unknown.",
+                Severity = Severity.High,
+                Likelihood = 3,
+                Impact = 3,
+                Owner = "Anthony McLoughlin",
+                EvidenceGapRationale = "No database evidence pack is linked yet.",
+                Confidence = "Low",
+                Validation = ValidationStatus.Captured,
+                Recommendation = "Obtain DBA confirmation of version, edition, instance and schemas.",
+                IncludeInDocument = true,
+            },
+            new Finding
+            {
+                ProjectId = project.Id,
+                SystemId = aquis.Id,
+                Type = FindingType.InformationGap,
+                Domain = ScanDomainKind.Infrastructure,
+                Title = "Identify application and database hosting locations",
+                Description = "Application server, database server and hosting locations remain unknown.",
+                Severity = Severity.High,
+                Likelihood = 3,
+                Impact = 3,
+                Owner = "Anthony McLoughlin",
+                EvidenceGapRationale = "Hosting questionnaire is blank.",
+                Confidence = "Low",
+                Validation = ValidationStatus.Captured,
+                Recommendation = "Confirm on-premises locations, environments and owners with infrastructure.",
+                IncludeInDocument = true,
+            },
+            new Finding
+            {
+                ProjectId = project.Id,
+                SystemId = aquis.Id,
                 Type = FindingType.InformationGap,
                 Domain = ScanDomainKind.Architecture,
                 Title = "AQUIS walkthrough transcript is incomplete",
-                Description = "The available walkthrough transcript is incomplete. Several architecture and integration claims cannot be validated until a complete source is obtained.",
+                Description = "The available Oracle Forms walkthrough transcript is incomplete between 00:26 and 46:34. Several architecture and integration claims cannot be validated until a complete source is obtained.",
                 Severity = Severity.High,
                 Likelihood = 4,
                 Impact = 3,
@@ -486,7 +573,7 @@ public static class MarketScanSeed
                 Type = FindingType.Dependency,
                 Domain = ScanDomainKind.Integrations,
                 Title = "AQUIS relationship with Groundwater is unconfirmed",
-                Description = "A possible relationship with Groundwater, including drill-log processes, was identified but is not a confirmed current-state integration.",
+                Description = "A possible relationship with Groundwater, including drill-log processes, was identified but is not a confirmed current-state integration. Oracle Forms pattern is similar.",
                 Severity = Severity.Moderate,
                 Likelihood = 3,
                 Impact = 3,
@@ -553,21 +640,41 @@ public static class MarketScanSeed
             CreatedAt = at,
             ActivityJson = activity,
             ChecksumSha256 = checksum,
-            RecordId = "DOC-AQUIS-0001",
+            RecordId = version == "v1.0" ? "DOC-AQUIS-0001" : "",
             Warnings = "Draft documents contain clearly labelled unvalidated content.",
+            SearchIndexed = version is "v0.1" or "v0.3" or "v1.0",
+            ShowOnProfile = version is "v1.0" or "v0.3",
+            Summary = "The system currently relies on Oracle Forms. Detailed architecture, database configuration and hosting arrangements remain under assessment.",
+            PublicationNote = "Approved current-state assessment covering Oracle Forms architecture for market-scan and RFI activities.",
         };
         var t1 = new DateTimeOffset(2026, 8, 19, 1, 32, 0, TimeSpan.FromHours(10));
         var t2 = new DateTimeOffset(2026, 8, 20, 5, 10, 0, TimeSpan.FromHours(10));
         var t3 = new DateTimeOffset(2026, 8, 20, 6, 48, 0, TimeSpan.FromHours(10));
+        var tPub = new DateTimeOffset(2026, 8, 20, 7, 31, 0, TimeSpan.FromHours(10));
         var v3 = Doc("v0.3", "Word", "Draft", t3, """[{"at":"2026-08-20T16:48:00+10:00","text":"v0.3 generated from assessment snapshot v0.3"},{"at":"2026-08-20T16:42:00+10:00","text":"Anthony McLoughlin validation applied"},{"at":"2026-08-20T15:10:00+10:00","text":"v0.2 generated as PDF"},{"at":"2026-08-19T11:32:00+10:00","text":"Initial document generated"}]""");
         v3.Comments.AddRange(
             new DocumentComment { SectionNumber = 4, Section = "Architecture & technical design", Author = "Michael", Domain = "Architecture", Text = "Confirm the Oracle Forms version before final release.", Status = "Unresolved" },
             new DocumentComment { SectionNumber = 5, Section = "Infrastructure & hosting", Author = "Michael", Domain = "Infrastructure", Text = "Clarify whether database hosting is on-premises.", Status = "Unresolved" },
             new DocumentComment { SectionNumber = 9, Section = "Security & compliance", Author = "Michael", Domain = "Security", Text = "Security section is intentionally deferred.", Status = "Acknowledged" });
+        var v1 = Doc("v1.0", "Word", "Published", tPub, """[{"at":"2026-08-20T17:31:00+10:00","text":"Published by Asish Punnose"},{"at":"2026-08-20T17:26:00+10:00","text":"Document approved by Michael"},{"at":"2026-08-20T16:42:00+10:00","text":"SME validation applied"},{"at":"2026-08-20T14:05:00+10:00","text":"Walkthrough evidence added"}]""");
+        v1.ApprovalState = "Published";
+        v1.PublishedVersion = "v1.0";
+        v1.PublishedAt = tPub;
+        v1.Locked = true;
+        v1.Approver = "Michael";
+        v1.ApprovedAt = new DateTimeOffset(2026, 8, 20, 7, 26, 0, TimeSpan.FromHours(10));
+        v1.ReviewDate = new DateOnly(2027, 2, 20);
+        v1.Readiness = 100;
+        v1.ViewCount = 24;
+        v1.DownloadCount = 7;
+        v1.SearchIndexed = true;
+        v1.ShowOnProfile = true;
+        v1.RecordId = "DOC-AQUIS-0001";
         db.GeneratedDocuments.AddRange(
             Doc("v0.1", "Word", "Superseded", t1, """[{"at":"2026-08-19T11:32:00+10:00","text":"Initial document generated"}]"""),
             Doc("v0.2", "PDF", "Superseded", t2, """[{"at":"2026-08-20T15:10:00+10:00","text":"v0.2 generated as PDF"}]"""),
-            v3);
+            v3,
+            v1);
 
         db.Claims.AddRange(
             Claim(project, aquis, ScanDomainKind.Architecture, "AQUIS uses Oracle Forms as its front end", "Pending", "High", InformationState.Current),
@@ -581,7 +688,7 @@ public static class MarketScanSeed
             Claim(project, aquis, ScanDomainKind.Infrastructure, "AQUIS is hosted on-premises", "Pending", "Medium", InformationState.Current),
             Claim(project, aquis, ScanDomainKind.Architecture, "Oracle Forms modules require confirmation", "Corrected", "Medium", InformationState.Current),
             Claim(project, aquis, ScanDomainKind.Integrations, "Drill-log relationship is possible", "Confirmed", "Low", InformationState.Suspected),
-            Claim(project, aquis, ScanDomainKind.Architecture, "An internal reviewer application is required", "Pending", "High", InformationState.Future));
+            Claim(project, aquis, ScanDomainKind.Architecture, "An internal reviewer application is required", "Confirmed", "High", InformationState.Future));
 
         var request = new ValidationRequest
         {

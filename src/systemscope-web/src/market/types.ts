@@ -253,6 +253,10 @@ export function pillClass(status: string) {
   const s = status.toLowerCase();
   if (s.includes('progress') || s.includes('incomplete') || s.includes('requested')) return 'pill amber';
   if (s.includes('rfi') || s.includes('approved') || s.includes('validated')) return 'pill blue';
-  if (s.includes('deferred') || s.includes('unknown')) return 'pill mute';
+  if (s.includes('deferred') || s.includes('unknown') || s.includes('not assessed')) return 'pill mute';
+  if (s.includes('gap') || s.includes('awaiting') || s.includes('unconfirmed') || s.includes('to confirm')) return 'pill amber';
+  if (s.includes('unvalidated') || s.includes('rejected')) return 'pill red';
+  if (s.includes('infer') || s.includes('proposed') || s.includes('future')) return 'pill blue';
+  if (s.includes('confirm')) return 'pill';
   return 'pill';
 }

@@ -349,6 +349,9 @@ public class GeneratedDocument : Record
     public bool Locked { get; set; }
     public string ApprovalComment { get; set; } = "";
     public DateTimeOffset? ApprovedAt { get; set; }
+    public int ViewCount { get; set; }
+    public int DownloadCount { get; set; }
+    public string Summary { get; set; } = "";
     public List<DocumentComment> Comments { get; set; } = [];
 }
 
