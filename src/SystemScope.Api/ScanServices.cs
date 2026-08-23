@@ -151,7 +151,14 @@ public static class ScanWorkspace
             foreach (var (kind, _, _) in ScanScoring.Weights)
             {
                 if (scan.Domains.Any(d => d.Kind == kind)) continue;
-                scan.Domains.Add(new ScanDomainState { Kind = kind, Requirement = DomainRequirement.Required });
+                var domain = new ScanDomainState
+                {
+                    ScanAssessmentId = scan.Id,
+                    Kind = kind,
+                    Requirement = DomainRequirement.Required,
+                };
+                scan.Domains.Add(domain);
+                db.ScanDomains.Add(domain);
                 added = true;
             }
             if (added) await db.SaveChangesAsync();
