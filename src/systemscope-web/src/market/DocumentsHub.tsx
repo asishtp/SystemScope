@@ -35,6 +35,7 @@ type Hub = {
 };
 
 type Compare = { findingsAdded: number; findingsValidated: number; sectionUpdated: number; securityChanges: number; left: string; right: string };
+type DesignTemplate = { id: string; name: string; fileName: string; createdAt: string; uploadedBy: string; isDefault: boolean };
 
 export function DocumentsHub({
   catalogKey,
@@ -61,6 +62,7 @@ export function DocumentsHub({
   const [approver, setApprover] = useState('Michael');
   const [busy, setBusy] = useState(false);
   const [settings, setSettings] = useState(false);
+  const [designTemplates, setDesignTemplates] = useState<DesignTemplate[]>([]);
   const load = () => api<Hub>(`/documents/by-key/${catalogKey}`).then(h => {
     setHub(h);
     setSelected(s => s && h.documents.some(d => d.id === s) ? s : h.documents[0]?.id);
@@ -68,6 +70,15 @@ export function DocumentsHub({
     setRight(v => v || h.documents[1]?.versionLabel || '');
   });
   useEffect(() => { load().catch(e => setNotice(e.message)); }, [catalogKey]);
+  useEffect(() => { if (hub?.system.projectId) api<DesignTemplate[]>(`/document-design-templates?projectId=${hub.system.projectId}`).then(setDesignTemplates).catch(e => setNotice(e.message)); }, [hub?.system.projectId]);
+  const uploadTemplate = async (file: File | undefined) => {
+    if (!file || !hub) return;
+    const form = new FormData(); form.append('projectId', hub.system.projectId); form.append('name', file.name.replace(/\.docx$/i, '')); form.append('isDefault', 'true'); form.append('file', file);
+    const created = await api<DesignTemplate>('/document-design-templates', { method: 'POST', body: form });
+    localStorage.setItem(`document-design-${hub.system.projectId}`, created.id);
+    setDesignTemplates(await api<DesignTemplate[]>(`/document-design-templates?projectId=${hub.system.projectId}`));
+    setNotice(`${created.name} uploaded and selected as the project design template.`);
+  };
   if (!hub) return <div className="empty"><p>{notice || 'Loading documents…'}</p></div>;
   const docs = hub.documents.filter(d => {
     if (q && !`${d.title} ${d.versionLabel}`.toLowerCase().includes(q.toLowerCase())) return false;
@@ -125,6 +136,9 @@ export function DocumentsHub({
             <label>Default template<select defaultValue="Market Scan – System Assessment"><option>Market Scan – System Assessment</option></select></label>
             <label>Default audience<select defaultValue="Internal market scan"><option>Internal market scan</option><option>External</option></select></label>
           </div>
+          <label>Uploaded design<select defaultValue={localStorage.getItem(`document-design-${hub.system.projectId}`) || designTemplates.find(t => t.isDefault)?.id || ''} onChange={e => localStorage.setItem(`document-design-${hub.system.projectId}`, e.target.value)}><option value="">SystemScope standard design</option>{designTemplates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
+          <label>Upload Word design template (.docx)<input type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={e => uploadTemplate(e.target.files?.[0]).catch(error => setNotice(error.message))} /></label>
+          <p className="hint">The generated document preserves the uploaded template's styles, page layout, logo, headers and footers while replacing its body with live SystemScope content.</p>
           <p className="hint">Generated documents remain immutable snapshots. Changing settings applies to the next generation only.</p>
         </section>
       )}
@@ -258,6 +272,8 @@ export function DocumentPreview({ catalogKey, onBack, onGenerated }: { catalogKe
   const [includeRequirements, setIncludeRequirements] = useState(true);
   const [includeSources, setIncludeSources] = useState(true);
   const [includeSecurity, setIncludeSecurity] = useState(false);
+  const [designTemplates, setDesignTemplates] = useState<DesignTemplate[]>([]);
+  const [designTemplateId, setDesignTemplateId] = useState('');
   const [busy, setBusy] = useState(false);
   const [page, setPage] = useState(1);
   const [zoom, setZoom] = useState(90);
@@ -273,6 +289,10 @@ export function DocumentPreview({ catalogKey, onBack, onGenerated }: { catalogKe
     if (documentScope === 'project' && hub?.system.projectId)
       api<typeof projectPreview>(`/documents/preview/project/${hub.system.projectId}`).then(setProjectPreview).catch(() => undefined);
   }, [documentScope, hub?.system.projectId]);
+  useEffect(() => {
+    if (!hub?.system.projectId) return;
+    api<DesignTemplate[]>(`/document-design-templates?projectId=${hub.system.projectId}`).then(items => { setDesignTemplates(items); setDesignTemplateId(localStorage.getItem(`document-design-${hub.system.projectId}`) || items.find(t => t.isDefault)?.id || ''); });
+  }, [hub?.system.projectId]);
   const generate = async () => {
     if (!hub) return;
     setBusy(true);
@@ -289,6 +309,7 @@ export function DocumentPreview({ catalogKey, onBack, onGenerated }: { catalogKe
           includeGaps,
           includeRequirements,
           includeSecurityAppendix: includeSecurity,
+          designTemplateId: designTemplateId || null,
           format,
         }),
       });
@@ -355,6 +376,7 @@ export function DocumentPreview({ catalogKey, onBack, onGenerated }: { catalogKe
         <aside className="panel pad-form">
           <h3>Document settings</h3>
           <label>Document scope<select value={documentScope} onChange={e => setDocumentScope(e.target.value as 'project' | 'system')}><option value="project">All applications in this project</option><option value="system">This application only ({preview.system})</option></select></label>
+          <label>Document design<select value={designTemplateId} onChange={e => { setDesignTemplateId(e.target.value); if (hub) localStorage.setItem(`document-design-${hub.system.projectId}`, e.target.value); }}><option value="">SystemScope standard design</option>{designTemplates.map(t => <option value={t.id} key={t.id}>{t.name}</option>)}</select></label>
           <label>Template<select defaultValue="Market Scan – System Assessment"><option>Market Scan – System Assessment</option></select></label>
           <label>Audience<select value={audience} onChange={e => setAudience(e.target.value)}><option>Internal market scan</option><option>External</option></select></label>
           <label>Assessment date<input type="date" defaultValue="2026-08-20" /></label>

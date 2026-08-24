@@ -366,7 +366,7 @@ public static class ScanWorkspace
 
 public static class MarketScanDocument
 {
-    public static byte[] Word(DocumentModel model)
+    public static byte[] Word(DocumentModel model, byte[]? designTemplate = null)
     {
         var body = new XElement(W + "body");
         Heading(body, model.Title, "Heading1");
@@ -431,6 +431,8 @@ public static class MarketScanDocument
             new XDeclaration("1.0", "UTF-8", "yes"),
             new XElement(W + "document", new XAttribute(XNamespace.Xmlns + "w", W.NamespaceName), body));
 
+        if (designTemplate is { Length: > 0 }) return ApplyDesignTemplate(designTemplate, document);
+
         using var stream = new MemoryStream();
         using (var zip = new ZipArchive(stream, ZipArchiveMode.Create, true))
         {
@@ -457,6 +459,42 @@ public static class MarketScanDocument
             writer.Write(document.ToString(SaveOptions.DisableFormatting));
         }
         return stream.ToArray();
+    }
+
+    static byte[] ApplyDesignTemplate(byte[] templateBytes, XDocument generated)
+    {
+        using var sourceStream = new MemoryStream(templateBytes);
+        using var source = new ZipArchive(sourceStream, ZipArchiveMode.Read, true);
+        var sourceDocument = source.GetEntry("word/document.xml") ?? throw new InvalidDataException("Template has no Word document body.");
+        XDocument templateDocument;
+        using (var reader = sourceDocument.Open()) templateDocument = XDocument.Load(reader);
+        var templateBody = templateDocument.Root?.Element(W + "body") ?? throw new InvalidDataException("Template has no document body.");
+        var generatedBody = generated.Root!.Element(W + "body")!;
+        var sectionProperties = templateBody.Elements(W + "sectPr").LastOrDefault();
+        templateBody.Elements().Where(x => x.Name != W + "sectPr").Remove();
+        foreach (var element in generatedBody.Elements().Where(x => x.Name != W + "sectPr"))
+            if (sectionProperties is null) templateBody.Add(new XElement(element)); else sectionProperties.AddBeforeSelf(new XElement(element));
+
+        using var output = new MemoryStream();
+        using (var destination = new ZipArchive(output, ZipArchiveMode.Create, true))
+        {
+            foreach (var entry in source.Entries)
+            {
+                var copy = destination.CreateEntry(entry.FullName, CompressionLevel.Optimal);
+                using var target = copy.Open();
+                if (entry.FullName.Equals("word/document.xml", StringComparison.OrdinalIgnoreCase))
+                {
+                    using var writer = new StreamWriter(target, new UTF8Encoding(false));
+                    writer.Write(templateDocument.ToString(SaveOptions.DisableFormatting));
+                }
+                else
+                {
+                    using var original = entry.Open();
+                    original.CopyTo(target);
+                }
+            }
+        }
+        return output.ToArray();
     }
 
     static readonly XNamespace W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";

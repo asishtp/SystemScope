@@ -5,7 +5,7 @@ export function setAuthToken(token: string | null) {
 }
 
 export async function api<T>(url: string, o?: RequestInit): Promise<T> {
-  const headers: Record<string, string> = { 'Content-Type': 'application/json', ...(o?.headers as Record<string, string> | undefined) };
+  const headers: Record<string, string> = { ...(o?.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }), ...(o?.headers as Record<string, string> | undefined) };
   if (authToken) headers.Authorization = `Bearer ${authToken}`;
   const r = await fetch('/api' + url, { ...o, headers });
   if (!r.ok) throw Error(await r.text());

@@ -306,6 +306,8 @@ public class ValidationItem : Record
 public class GeneratedDocument : Record
 {
     public Guid ProjectId { get; set; }
+    public Guid? DesignTemplateId { get; set; }
+    public DocumentDesignTemplate? DesignTemplate { get; set; }
     public string Title { get; set; } = "";
     public string TemplateName { get; set; } = "Market scan";
     public string TemplateVersion { get; set; } = "1.0";
@@ -353,6 +355,18 @@ public class GeneratedDocument : Record
     public int DownloadCount { get; set; }
     public string Summary { get; set; } = "";
     public List<DocumentComment> Comments { get; set; } = [];
+}
+
+[System.ComponentModel.DataAnnotations.Schema.Table("DocumentDesignTemplates")]
+public class DocumentDesignTemplate : Record
+{
+    public Guid ProjectId { get; set; }
+    public string Name { get; set; } = "";
+    public string FileName { get; set; } = "template.docx";
+    public string ContentType { get; set; } = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    public byte[] FileBytes { get; set; } = [];
+    public string UploadedBy { get; set; } = "";
+    public bool IsDefault { get; set; }
 }
 
 public class DocumentComment : Record

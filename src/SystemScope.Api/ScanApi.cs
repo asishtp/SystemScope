@@ -474,6 +474,34 @@ public static class ScanApi
             return Results.Ok(item);
         });
 
+        api.MapGet("/document-design-templates", async (Guid projectId, AppDbContext db) =>
+            await db.Set<DocumentDesignTemplate>().Where(x => x.ProjectId == projectId && !x.Archived).OrderByDescending(x => x.IsDefault).ThenBy(x => x.Name)
+                .Select(x => new { x.Id, x.Name, x.FileName, x.CreatedAt, x.UploadedBy, x.IsDefault }).ToListAsync());
+
+        api.MapPost("/document-design-templates", async (HttpRequest request, AppDbContext db, AuditService audit, ClaimsPrincipal u) =>
+        {
+            var form = await request.ReadFormAsync();
+            if (!Guid.TryParse(form["projectId"], out var projectId) || await db.Projects.FindAsync(projectId) is null) return Results.BadRequest("A valid project is required.");
+            var file = form.Files.GetFile("file");
+            if (file is null || file.Length == 0) return Results.BadRequest("Select a Word .docx template.");
+            if (!Path.GetExtension(file.FileName).Equals(".docx", StringComparison.OrdinalIgnoreCase)) return Results.BadRequest("Only Word .docx templates are supported.");
+            if (file.Length > 10 * 1024 * 1024) return Results.BadRequest("Template size must not exceed 10 MB.");
+            await using var input = file.OpenReadStream();
+            using var buffer = new MemoryStream();
+            await input.CopyToAsync(buffer);
+            try { using var package = new System.IO.Compression.ZipArchive(new MemoryStream(buffer.ToArray()), System.IO.Compression.ZipArchiveMode.Read); if (package.GetEntry("word/document.xml") is null) return Results.BadRequest("The uploaded file is not a valid Word document."); }
+            catch (InvalidDataException) { return Results.BadRequest("The uploaded file is not a valid Word document."); }
+            var templates = db.Set<DocumentDesignTemplate>();
+            var existing = await templates.Where(x => x.ProjectId == projectId && !x.Archived).ToListAsync();
+            var makeDefault = existing.Count == 0 || string.Equals(form["isDefault"], "true", StringComparison.OrdinalIgnoreCase);
+            if (makeDefault) foreach (var item in existing) item.IsDefault = false;
+            var template = new DocumentDesignTemplate { ProjectId = projectId, Name = string.IsNullOrWhiteSpace(form["name"]) ? Path.GetFileNameWithoutExtension(file.FileName) : form["name"].ToString().Trim(), FileName = Path.GetFileName(file.FileName), ContentType = file.ContentType, FileBytes = buffer.ToArray(), UploadedBy = u.Identity?.Name ?? "Local Assessment Lead", IsDefault = makeDefault };
+            templates.Add(template);
+            await audit.Record(db, u, "Upload", "DocumentDesignTemplate", template.Id, template.Name, projectId);
+            await db.SaveChangesAsync();
+            return Results.Created($"/api/document-design-templates/{template.Id}", new { template.Id, template.Name, template.FileName, template.IsDefault });
+        }).DisableAntiforgery();
+
         api.MapGet("/documents", async (Guid? projectId, AppDbContext db) =>
             await db.GeneratedDocuments.Where(x => projectId == null || x.ProjectId == projectId)
                 .OrderByDescending(x => x.CreatedAt)
@@ -588,7 +616,10 @@ public static class ScanApi
                 sections,
                 relationshipLines,
                 requirementLines);
-            var bytes = MarketScanDocument.Word(model);
+            var designTemplate = i.DesignTemplateId is Guid templateId
+                ? await db.Set<DocumentDesignTemplate>().FirstOrDefaultAsync(x => x.Id == templateId && x.ProjectId == project.Id && !x.Archived)
+                : await db.Set<DocumentDesignTemplate>().FirstOrDefaultAsync(x => x.ProjectId == project.Id && x.IsDefault && !x.Archived);
+            var bytes = MarketScanDocument.Word(model, designTemplate?.FileBytes);
             var primary = selected[0];
             var isPortfolio = selected.Count > 1;
             var documentKey = isPortfolio ? ScanWorkspace.Slug("", project.Name) : primary.CatalogKey;
@@ -599,10 +630,11 @@ public static class ScanApi
             var doc = new GeneratedDocument
             {
                 ProjectId = project.Id,
+                DesignTemplateId = designTemplate?.Id,
                 AssessedSystemId = isPortfolio ? null : primary.Id,
                 CatalogKey = documentKey,
                 Title = isPortfolio ? $"{project.Name} Technical Landscape Assessment" : $"{primary.Name} Current-State System Assessment",
-                TemplateName = isPortfolio ? "Technical Landscape Assessment v1.0" : "Market Scan v1.0",
+                TemplateName = designTemplate?.Name ?? (isPortfolio ? "Technical Landscape Assessment v1.0" : "Market Scan v1.0"),
                 TemplateVersion = "1.0",
                 Audience = audience,
                 StateScope = i.StateScope ?? "Current",
@@ -908,5 +940,5 @@ public record DataDomainInput(string Name, string BusinessDescription, string Au
 public record SecurityInput(string Name, string Area, string Description, string Status, VisibilityClass Visibility, Guid? EvidenceId, ValidationStatus Validation);
 public record GapInput(ScanDomainKind Domain, string MissingInformation, string? ReasonRequired, Priority Priority, string? MarketScanImpact, string? AssignedOwner, DateOnly? DueDate, GapStatus Status, string? Resolution, Guid? EvidenceId);
 public record IntegrationScanInput(string Name, string SourceSystem, string Target, string BusinessPurpose, string Direction, string InformationExchanged, InformationState State, string InterfaceType, string Method, string Technology, string Frequency, string Trigger, string Volume, string Authentication, string Encryption, string Transformation, string ErrorHandling, string RetryMechanism, string Owner, string Monitoring, string Criticality, string ReplacementImpact, Guid? EvidenceId, ValidationStatus Validation);
-public record DocumentInput(Guid ProjectId, List<Guid> SystemIds, string? Audience, string? StateScope, bool IncludeDiagrams, bool IncludeFindings, bool IncludeGaps, bool IncludeSecurityAppendix, string? Format=null, bool IncludeRequirements=true);
+public record DocumentInput(Guid ProjectId, List<Guid> SystemIds, string? Audience, string? StateScope, bool IncludeDiagrams, bool IncludeFindings, bool IncludeGaps, bool IncludeSecurityAppendix, string? Format=null, bool IncludeRequirements=true, Guid? DesignTemplateId=null);
 public record AnalyseInput(string Title, string Url, string? Source, string? SourceType, string? Completeness, string? Reliability, string? Confidentiality, string? Participants, string? Description, string? EvidenceDate, bool ExtractTechnologies, bool ExtractIntegrations, bool ExtractFindings, bool ExtractGaps, bool ExtractClaims, bool AutoValidate);
