@@ -13,7 +13,7 @@ public static class WorkflowApi
         {
             var system = await db.Systems.FirstOrDefaultAsync(x => x.CatalogKey == key);
             if (system is null) return Results.NotFound();
-            var docs = await db.GeneratedDocuments.Include(x => x.Comments).Where(x => x.AssessedSystemId == system.Id || x.CatalogKey == key)
+            var docs = await db.GeneratedDocuments.Include(x => x.Comments).Where(x => x.AssessedSystemId == system.Id || x.CatalogKey == key || (x.ProjectId == system.ProjectId && x.AssessedSystemId == null))
                 .OrderByDescending(x => x.CreatedAt).ToListAsync();
             var scan = await db.ScanAssessments.FirstOrDefaultAsync(x => x.AssessedSystemId == system.Id);
             var project = await db.Projects.FindAsync(system.ProjectId);
@@ -326,6 +326,31 @@ public static class WorkflowApi
                 warnings = new[] { "Document will clearly label unvalidated content." },
                 includeSecurity = includeSecurity ?? false,
                 audience = selectedAudience,
+            });
+        });
+
+        api.MapGet("/documents/preview/project/{projectId:guid}", async (Guid projectId, AppDbContext db) =>
+        {
+            var project = await db.Projects.FindAsync(projectId);
+            if (project is null) return Results.NotFound();
+            var systems = await db.Systems.Where(x => x.ProjectId == projectId && !x.Archived).OrderBy(x => x.Name).ToListAsync();
+            var systemIds = systems.Select(x => x.Id).ToList();
+            var scans = await db.ScanAssessments.Where(x => systemIds.Contains(x.AssessedSystemId)).ToListAsync();
+            var integrations = await db.Integrations.Where(x => x.ProjectId == projectId && !x.Archived).ToListAsync();
+            var requirements = await db.Requirements.Where(x => x.ProjectId == projectId).OrderBy(x => x.Priority).ThenBy(x => x.Title).ToListAsync();
+            return Results.Ok(new
+            {
+                project = project.Name,
+                project.Objective,
+                project.Scope,
+                date = DateTime.UtcNow.ToString("dd MMMM yyyy"),
+                systems = systems.Select(system =>
+                {
+                    var scan = scans.FirstOrDefault(x => x.AssessedSystemId == system.Id);
+                    return new { system.Id, system.Name, system.Acronym, system.CatalogKey, system.Description, completeness = scan?.InformationCompleteness ?? 0, validation = scan?.ValidationCompleteness ?? 0, readiness = scan?.DocumentReadiness ?? 0 };
+                }),
+                relationships = integrations.Select(x => new { source = x.SourceSystem, target = x.Target, x.Name, x.Method, state = x.State.ToString() }),
+                requirements = requirements.Select(x => new { x.Title, x.Description, type = x.Type, x.Category, priority = x.Priority.ToString(), x.Mandatory, x.AcceptanceCriteria }),
             });
         });
 

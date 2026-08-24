@@ -555,6 +555,22 @@ public static class ScanApi
                     evidence.Select(e => $"{e.Title} ({e.SourceType}, {e.Completeness}, {e.Source})").ToList()));
             }
             var version = $"scan-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss}";
+            var selectedIds = selected.Select(s => s.Id).ToHashSet();
+            var relationships = i.IncludeDiagrams
+                ? await db.Integrations.Where(x => x.ProjectId == project.Id && !x.Archived && selectedIds.Contains(x.SystemId)).ToListAsync()
+                : [];
+            var selectedNames = selected.SelectMany(s => new[] { s.Name, s.Acronym, s.CatalogKey }.Where(v => !string.IsNullOrWhiteSpace(v)).Select(v => (Key: v.Trim(), System: s)))
+                .GroupBy(x => x.Key, StringComparer.OrdinalIgnoreCase).ToDictionary(x => x.Key, x => x.First().System, StringComparer.OrdinalIgnoreCase);
+            var relationshipLines = relationships.Where(x => selectedNames.ContainsKey(x.Target.Trim())).Select(x =>
+            {
+                var source = selected.First(s => s.Id == x.SystemId).Name;
+                var target = selectedNames[x.Target.Trim()].Name;
+                return $"{source} → {target}: {x.Name}; method {(string.IsNullOrWhiteSpace(x.Method) ? "not recorded" : x.Method)}; direction {x.Direction}; status {x.State}.";
+            }).ToList();
+            var requirementLines = i.IncludeRequirements
+                ? await db.Requirements.Where(x => x.ProjectId == project.Id).OrderBy(x => x.Priority).ThenBy(x => x.Title)
+                    .Select(x => new MarketScanDocument.RequirementLine(x.Title, x.Description, x.Type, x.Category, x.Priority.ToString(), x.Mandatory, x.AcceptanceCriteria)).ToListAsync()
+                : [];
             var model = new MarketScanDocument.DocumentModel(
                 $"{project.Name}",
                 "Market scan",
@@ -569,20 +585,24 @@ public static class ScanApi
                 includeSecurity,
                 i.IncludeGaps,
                 warnings,
-                sections);
+                sections,
+                relationshipLines,
+                requirementLines);
             var bytes = MarketScanDocument.Word(model);
             var primary = selected[0];
-            var previous = await db.GeneratedDocuments.Where(x => x.AssessedSystemId == primary.Id).ToListAsync();
+            var isPortfolio = selected.Count > 1;
+            var documentKey = isPortfolio ? ScanWorkspace.Slug("", project.Name) : primary.CatalogKey;
+            var previous = await db.GeneratedDocuments.Where(x => isPortfolio ? x.ProjectId == project.Id && x.AssessedSystemId == null : x.AssessedSystemId == primary.Id).ToListAsync();
             foreach (var old in previous.Where(x => x.Status == "Draft")) old.Status = "Superseded";
             var nextVersion = previous.Count + 1;
             var readinessScan = await db.ScanAssessments.FirstOrDefaultAsync(x => x.AssessedSystemId == primary.Id);
             var doc = new GeneratedDocument
             {
                 ProjectId = project.Id,
-                AssessedSystemId = primary.Id,
-                CatalogKey = primary.CatalogKey,
-                Title = $"{primary.Name} Current-State System Assessment",
-                TemplateName = "Market Scan v1.0",
+                AssessedSystemId = isPortfolio ? null : primary.Id,
+                CatalogKey = documentKey,
+                Title = isPortfolio ? $"{project.Name} Technical Landscape Assessment" : $"{primary.Name} Current-State System Assessment",
+                TemplateName = isPortfolio ? "Technical Landscape Assessment v1.0" : "Market Scan v1.0",
                 TemplateVersion = "1.0",
                 Audience = audience,
                 StateScope = i.StateScope ?? "Current",
@@ -591,7 +611,7 @@ public static class ScanApi
                 Format = string.Equals(i.Format, "PDF", StringComparison.OrdinalIgnoreCase) ? "PDF" : "Word",
                 SnapshotJson = ScanWorkspace.Snapshot(new { project.Id, systems = selected.Select(s => s.Id), version, warnings }),
                 FileBytes = bytes,
-                FileName = $"{ScanWorkspace.Slug(primary.Acronym, primary.Name)}-v0.{nextVersion}.docx",
+                FileName = $"{documentKey}-v0.{nextVersion}.docx",
                 Status = "Draft",
                 ApprovalState = "Not submitted",
                 GeneratedBy = u.Identity?.Name ?? "Local Assessment Lead",
@@ -604,7 +624,7 @@ public static class ScanApi
                 FileSizeBytes = bytes.Length,
                 Readiness = readinessScan?.DocumentReadiness ?? 0,
                 ChecksumSha256 = Convert.ToHexString(SHA256.HashData(bytes)),
-                RecordId = $"DOC-{primary.CatalogKey.ToUpperInvariant()}-0001",
+                RecordId = $"DOC-{documentKey.ToUpperInvariant()}-0001",
                 ActivityJson = JsonSerializer.Serialize(new[] { new { at = DateTimeOffset.UtcNow, text = $"v0.{nextVersion} generated from assessment snapshot" } }),
             };
             db.GeneratedDocuments.Add(doc);
@@ -641,36 +661,110 @@ public static class ScanApi
         });
     }
 
-    public static async Task<object> Dashboard(AppDbContext db)
+    public static async Task<object> Dashboard(AppDbContext db, Guid? projectId = null)
     {
-        var scans = await db.ScanAssessments.Include(x => x.Domains).ToListAsync();
-        var systems = await db.Systems.Where(x => !x.Archived).ToListAsync();
-        var gaps = await db.InformationGaps.ToListAsync();
-        var findings = await db.Findings.ToListAsync();
-        var actions = await db.Actions.ToListAsync();
-        var integrations = await db.Integrations.Where(x => !x.Archived).ToListAsync();
-        var documents = await db.GeneratedDocuments.OrderByDescending(x => x.CreatedAt).Take(5).ToListAsync();
-        var claims = await db.Claims.OrderByDescending(x => x.UpdatedAt).Take(8).ToListAsync();
+        var projects = await db.Projects.Where(x => !x.Archived).OrderByDescending(x => x.UpdatedAt).ToListAsync();
+        var selected = projectId is { } requested ? projects.FirstOrDefault(x => x.Id == requested) : projects.FirstOrDefault(x => x.Status == ProjectStatus.Active) ?? projects.FirstOrDefault();
+        var selectedId = selected?.Id;
+        var scans = await db.ScanAssessments.Include(x => x.Domains).Where(x => selectedId == null || x.ProjectId == selectedId).ToListAsync();
+        var systems = await db.Systems.Where(x => !x.Archived && (selectedId == null || x.ProjectId == selectedId)).ToListAsync();
+        var gaps = await db.InformationGaps.Where(x => selectedId == null || x.ProjectId == selectedId).ToListAsync();
+        var findings = await db.Findings.Where(x => selectedId == null || x.ProjectId == selectedId).ToListAsync();
+        var actions = await db.Actions.Where(x => selectedId == null || x.ProjectId == selectedId).ToListAsync();
+        var integrations = await db.Integrations.Where(x => !x.Archived && (selectedId == null || x.ProjectId == selectedId)).ToListAsync();
+        var documents = await db.GeneratedDocuments.Where(x => selectedId == null || x.ProjectId == selectedId).OrderByDescending(x => x.CreatedAt).ToListAsync();
+        var claims = await db.Claims.Where(x => selectedId == null || x.ProjectId == selectedId).ToListAsync();
+        var evidence = await db.Evidence.Where(x => selectedId == null || x.ProjectId == selectedId).ToListAsync();
         var info = scans.Count == 0 ? 0 : (int)Math.Round(scans.Average(s => s.InformationCompleteness));
-        var validation = scans.Count == 0 ? 0 : (int)Math.Round(scans.Average(s => s.ValidationCompleteness));
+        var evidencedClaims = claims.Where(c => c.EvidenceId is Guid id && evidence.Any(e => e.Id == id && e.Validated)).ToList();
+        var validation = claims.Count == 0 ? 0 : ScanScoring.Percent(evidencedClaims.Count(c => ScanScoring.CountsAsValidated(c.Validation)), claims.Count);
         var readiness = scans.Count == 0 ? 0 : (int)Math.Round(scans.Average(s => s.DocumentReadiness));
-        var assessments = await db.Assessments.Include(x => x.Responses).ToListAsync();
+        var assessments = await db.Assessments.Include(x => x.Responses).Where(x => selectedId == null || x.ProjectId == selectedId).ToListAsync();
         var all = assessments.SelectMany(x => x.Responses).ToList();
         var done = all.Count(x => !string.IsNullOrWhiteSpace(x.Answer) || x.Status is ResponseStatus.Unknown or ResponseStatus.NotApplicable);
         var coverage = all.Count == 0 ? info : (int)Math.Round(done * 100d / all.Count);
+        var systemByName = systems
+            .SelectMany(s => new[] { s.Name, s.Acronym, s.CatalogKey }.Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => (Key: x.Trim(), System: s)))
+            .GroupBy(x => x.Key, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First().System, StringComparer.OrdinalIgnoreCase);
+        var graphLinks = integrations.Select(i =>
+        {
+            var source = systems.FirstOrDefault(s => s.Id == i.SystemId);
+            systemByName.TryGetValue(i.Target.Trim(), out var target);
+            var status = ScanScoring.CountsAsValidated(i.Validation) ? "Confirmed"
+                : i.State == InformationState.Future ? "Unknown"
+                : i.Validation == ValidationStatus.Captured ? "Inferred"
+                : "RequiresValidation";
+            return new
+            {
+                id = i.Id.ToString(),
+                sourceId = source?.CatalogKey ?? source?.Id.ToString() ?? i.SourceSystem,
+                targetId = target?.CatalogKey ?? (string.IsNullOrWhiteSpace(i.Target) ? $"external-{i.Id:N}" : $"external-{ScanWorkspace.Slug("", i.Target)}"),
+                sourceName = source?.Name ?? i.SourceSystem,
+                targetName = target?.Name ?? i.Target,
+                status,
+            };
+        }).Where(x => !string.IsNullOrWhiteSpace(x.sourceId) && !string.IsNullOrWhiteSpace(x.targetName)).ToList();
+        var graphNodes = systems.Select(s => new
+        {
+            id = string.IsNullOrWhiteSpace(s.CatalogKey) ? s.Id.ToString() : s.CatalogKey,
+            name = s.Name,
+            catalogKey = s.CatalogKey,
+            external = false,
+            status = scans.Any(a => a.AssessedSystemId == s.Id && a.ValidationCompleteness > 0) ? "Confirmed" : "Inferred",
+        }).Cast<object>().ToList();
+        var openActions = actions.Where(a => a.Status != ActionStatus.Completed).OrderByDescending(a => a.Priority).ThenBy(a => a.DueDate).ToList();
+        object? nextAction = openActions.FirstOrDefault() is { } action ? new
+        {
+            kind = "Action",
+            action.Id,
+            action.Title,
+            action.Owner,
+            action.DueDate,
+            action.Priority,
+            systemKey = systems.FirstOrDefault(s => s.Id == action.SystemId)?.CatalogKey ?? "",
+        } : findings.Where(f => f.ReviewState != ReviewState.Approved).OrderByDescending(f => f.Severity).ThenBy(f => f.UpdatedAt).FirstOrDefault() is { } finding ? new
+        {
+            kind = "Finding",
+            finding.Id,
+            finding.Title,
+            finding.Owner,
+            DueDate = (DateOnly?)null,
+            Priority = finding.Severity >= Severity.High ? Priority.Must : Priority.Should,
+            systemKey = systems.FirstOrDefault(s => s.Id == finding.SystemId)?.CatalogKey ?? "",
+        } : null;
+        var domains = scans.SelectMany(s => s.Domains).ToList();
+        var progress = new
+        {
+            total = domains.Count,
+            confirmed = domains.Count(d => d.Completeness > 0 && d.LastValidatedAt != null),
+            inferred = domains.Count(d => d.Completeness > 0 && d.LastValidatedAt == null),
+            unvalidated = domains.Count(d => d.Completeness == 0 && d.EvidenceCount > 0),
+            unknown = domains.Count(d => d.Completeness == 0 && d.EvidenceCount == 0),
+        };
+        var confidence = new
+        {
+            confirmed = claims.Count(c => ScanScoring.CountsAsValidated(c.Validation)),
+            inferred = claims.Count(c => c.ClaimType == ClaimType.Inference && !ScanScoring.CountsAsValidated(c.Validation)),
+            unvalidated = claims.Count(c => c.ClaimType != ClaimType.Unknown && !ScanScoring.CountsAsValidated(c.Validation) && c.ClaimType != ClaimType.Inference),
+            unknown = claims.Count(c => c.ClaimType == ClaimType.Unknown),
+        };
         return new
         {
-            projects = await db.Projects.CountAsync(x => !x.Archived),
+            project = selected is null ? null : new { selected.Id, selected.Name, selected.Status, selected.TargetDate },
+            projectOptions = projects.Select(p => new { p.Id, p.Name, p.Status }),
+            projects = projects.Count,
             systems = systems.Count,
             coverage,
-            highFindings = findings.Count(x => x.Severity >= Severity.High && x.ReviewState != ReviewState.Approved),
+            highFindings = findings.Count(x => x.Severity >= Severity.High && x.ReviewState != ReviewState.Approved && !x.Archived),
             overdueActions = actions.Count(x => x.DueDate < DateOnly.FromDateTime(DateTime.UtcNow) && x.Status != ActionStatus.Completed),
-            informationGaps = gaps.Count(g => ScanScoring.IsOpenGap(g.Status)),
-            requirements = await db.Requirements.CountAsync(),
+            informationGaps = gaps.Count(g => !g.Archived && ScanScoring.IsOpenGap(g.Status)),
+            requirements = await db.Requirements.CountAsync(x => selectedId == null || x.ProjectId == selectedId),
             informationCompleteness = info,
             validationCompleteness = validation,
             documentReadiness = readiness,
             documentsReady = scans.Count(s => s.DocumentReadiness >= 80),
+            ownershipIncomplete = systems.Count(s => string.IsNullOrWhiteSpace(s.BusinessOwner) || string.IsNullOrWhiteSpace(s.TechnicalOwner)),
             overdueValidations = claims.Count(c => c.Validation is ValidationStatus.SmeReviewRequested or ValidationStatus.Captured),
             unsupportedTechnologies = await db.Components.CountAsync(x => x.SupportStatus.Contains("unsupported") || x.SupportStatus.Contains("end of")),
             integrationCount = integrations.Count,
@@ -678,8 +772,12 @@ public static class ScanApi
             systemsByLifecycle = systems.GroupBy(s => s.Lifecycle).Select(g => new { status = g.Key, count = g.Count() }),
             systemsByHosting = (await db.ScanFacts.Where(f => f.Attribute == "Hosting model").ToListAsync()).GroupBy(f => string.IsNullOrWhiteSpace(f.Value) ? "Unknown" : f.Value).Select(g => new { hosting = g.Key, count = g.Count() }),
             recentlyValidated = claims.Where(c => ScanScoring.CountsAsValidated(c.Validation)).Take(5).Select(c => new { c.Id, c.Statement, c.Validation, c.UpdatedAt }),
-            documents = documents.Select(d => new { d.Id, d.Title, d.Audience, d.CreatedAt, d.Status }),
-            activeProjects = await db.Projects.CountAsync(x => x.Status == ProjectStatus.Active && !x.Archived),
+            documents = documents.Take(5).Select(d => new { d.Id, d.Title, d.Audience, d.CreatedAt, d.Status }),
+            activeProjects = projects.Count(x => x.Status == ProjectStatus.Active),
+            relationshipGraph = new { nodes = graphNodes, links = graphLinks },
+            nextRecommendedAction = nextAction,
+            assessmentProgress = progress,
+            evidenceConfidence = confidence,
         };
     }
 
@@ -810,5 +908,5 @@ public record DataDomainInput(string Name, string BusinessDescription, string Au
 public record SecurityInput(string Name, string Area, string Description, string Status, VisibilityClass Visibility, Guid? EvidenceId, ValidationStatus Validation);
 public record GapInput(ScanDomainKind Domain, string MissingInformation, string? ReasonRequired, Priority Priority, string? MarketScanImpact, string? AssignedOwner, DateOnly? DueDate, GapStatus Status, string? Resolution, Guid? EvidenceId);
 public record IntegrationScanInput(string Name, string SourceSystem, string Target, string BusinessPurpose, string Direction, string InformationExchanged, InformationState State, string InterfaceType, string Method, string Technology, string Frequency, string Trigger, string Volume, string Authentication, string Encryption, string Transformation, string ErrorHandling, string RetryMechanism, string Owner, string Monitoring, string Criticality, string ReplacementImpact, Guid? EvidenceId, ValidationStatus Validation);
-public record DocumentInput(Guid ProjectId, List<Guid> SystemIds, string? Audience, string? StateScope, bool IncludeDiagrams, bool IncludeFindings, bool IncludeGaps, bool IncludeSecurityAppendix, string? Format=null);
+public record DocumentInput(Guid ProjectId, List<Guid> SystemIds, string? Audience, string? StateScope, bool IncludeDiagrams, bool IncludeFindings, bool IncludeGaps, bool IncludeSecurityAppendix, string? Format=null, bool IncludeRequirements=true);
 public record AnalyseInput(string Title, string Url, string? Source, string? SourceType, string? Completeness, string? Reliability, string? Confidentiality, string? Participants, string? Description, string? EvidenceDate, bool ExtractTechnologies, bool ExtractIntegrations, bool ExtractFindings, bool ExtractGaps, bool ExtractClaims, bool AutoValidate);

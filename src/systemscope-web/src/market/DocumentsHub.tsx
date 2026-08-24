@@ -111,9 +111,12 @@ export function DocumentsHub({
         </div>
         <div className="scan-head-actions">
           <button className="ghost" onClick={() => setSettings(s => !s)}>Document settings</button>
-          <button className="primary" onClick={onGenerate}>Generate new version</button>
+          <button className="primary" onClick={onGenerate}>Generate all-applications document</button>
         </div>
       </header>
+      <div className="notice" style={{ background: '#e7f5f1', color: '#116d63' }}>
+        Create one technical assessment covering every application in <b>{hub.system.projectName}</b>, including relationships, requirements, findings and gaps. Choose the all-applications scope on the generation screen.
+      </div>
       {notice && <div className="notice">{notice}<button onClick={() => setNotice('')}>×</button></div>}
       {settings && (
         <section className="panel pad-form">
@@ -241,10 +244,18 @@ export function DocumentPreview({ catalogKey, onBack, onGenerated }: { catalogKe
     executive: string; areaStatus: { area: string; status: string }[]; architecture: { attribute: string; value: string; claim: string }[];
   }>();
   const [hub, setHub] = useState<Hub>();
+  const [projectPreview, setProjectPreview] = useState<{
+    project: string; objective: string; scope: string; date: string;
+    systems: { id: string; name: string; acronym: string; catalogKey: string; description: string; completeness: number; validation: number; readiness: number }[];
+    relationships: { source: string; target: string; name: string; method: string; state: string }[];
+    requirements: { title: string; description: string; type: string; category: string; priority: string; mandatory: boolean; acceptanceCriteria: string }[];
+  }>({ project: '', objective: '', scope: '', date: '', systems: [], relationships: [], requirements: [] });
   const [audience, setAudience] = useState('Internal market scan');
   const [format, setFormat] = useState('Word');
+  const [documentScope, setDocumentScope] = useState<'project' | 'system'>('project');
   const [includeDiagrams, setIncludeDiagrams] = useState(true);
   const [includeGaps, setIncludeGaps] = useState(true);
+  const [includeRequirements, setIncludeRequirements] = useState(true);
   const [includeSources, setIncludeSources] = useState(true);
   const [includeSecurity, setIncludeSecurity] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -258,6 +269,10 @@ export function DocumentPreview({ catalogKey, onBack, onGenerated }: { catalogKe
     api<typeof preview>(`/documents/preview/${catalogKey}`).then(setPreview).catch(() => undefined);
     api<Hub>(`/documents/by-key/${catalogKey}`).then(setHub).catch(() => undefined);
   }, [catalogKey]);
+  useEffect(() => {
+    if (documentScope === 'project' && hub?.system.projectId)
+      api<typeof projectPreview>(`/documents/preview/project/${hub.system.projectId}`).then(setProjectPreview).catch(() => undefined);
+  }, [documentScope, hub?.system.projectId]);
   const generate = async () => {
     if (!hub) return;
     setBusy(true);
@@ -266,12 +281,13 @@ export function DocumentPreview({ catalogKey, onBack, onGenerated }: { catalogKe
         method: 'POST',
         body: JSON.stringify({
           projectId: hub.system.projectId,
-          systemIds: [hub.system.id],
+          systemIds: documentScope === 'project' ? [] : [hub.system.id],
           audience: audience.includes('External') ? 'External' : 'Internal',
           stateScope: 'Current',
           includeDiagrams,
           includeFindings: true,
           includeGaps,
+          includeRequirements,
           includeSecurityAppendix: includeSecurity,
           format,
         }),
@@ -281,13 +297,51 @@ export function DocumentPreview({ catalogKey, onBack, onGenerated }: { catalogKe
   };
   if (!preview) return <div className="empty"><p>Loading preview…</p></div>;
   const latest = hub?.documents[0];
+  const areaRows = preview.areaStatus ?? [];
+  const sectionPage = (title: string, match: string) => {
+    const rows = areaRows.filter(a => a.area.toLowerCase().includes(match.toLowerCase()));
+    return <>
+      <h1>{preview.system}</h1><h2>{title}</h2>
+      <p className="hint">{preview.project}<br />{preview.date}</p>
+      {rows.length ? <table className="preview-table">
+        <thead><tr><th>Assessment area</th><th>Current status</th></tr></thead>
+        <tbody>{rows.map(row => <tr key={row.area}><td>{row.area}</td><td>{row.status}</td></tr>)}</tbody>
+      </table> : <p>No assessed information is currently recorded for this section.</p>}
+    </>;
+  };
+  const renderPage = () => {
+    if (documentScope === 'project' && projectPreview) {
+      if (page === 1) return <><h1>{projectPreview.project}</h1><h2>Technical Landscape Assessment</h2><p>{projectPreview.objective}</p><p className="hint">{projectPreview.date} · {projectPreview.systems.length} applications in scope</p></>;
+      if (page === 2) return <><h1>Executive summary</h1><p>{projectPreview.scope}</p><table className="preview-table"><thead><tr><th>Application</th><th>Information</th><th>Validation</th><th>Readiness</th></tr></thead><tbody>{projectPreview.systems.map(s => <tr key={s.id}><td>{s.name}{s.acronym ? ` (${s.acronym})` : ''}</td><td>{s.completeness}%</td><td>{s.validation}%</td><td>{s.readiness}%</td></tr>)}</tbody></table></>;
+      if (page >= 3 && page <= 8) { const count = Math.max(1, Math.ceil(projectPreview.systems.length / 6)); const shown = projectPreview.systems.slice((page - 3) * count, (page - 2) * count); return <><h1>Application assessments</h1>{shown.map(s => <section key={s.id}><h2>{s.name}{s.acronym ? ` (${s.acronym})` : ''}</h2><p>{s.description || 'Purpose and technical details remain under assessment.'}</p><p className="hint">Information {s.completeness}% · Validation {s.validation}% · Document readiness {s.readiness}%</p></section>)}</>;
+      if (page === 9) return <><h1>Application relationships</h1>{projectPreview.relationships.length ? <table className="preview-table"><thead><tr><th>Source</th><th>Target</th><th>Relationship</th><th>Status</th></tr></thead><tbody>{projectPreview.relationships.map((r, i) => <tr key={`${r.source}-${r.target}-${i}`}><td>{r.source}</td><td>{r.target}</td><td>{r.name} · {r.method}</td><td>{r.state}</td></tr>)}</tbody></table> : <p>No application relationships are currently recorded.</p>}</>;
+      if (page === 10) return <><h1>Technical and business requirements</h1>{projectPreview.requirements.length ? projectPreview.requirements.map(r => <section key={r.title}><h3>{r.title}</h3><p>{r.description}</p><p className="hint">{r.priority} · {r.type} · {r.category} · {r.mandatory ? 'Mandatory' : 'Desirable'}<br />Acceptance criteria: {r.acceptanceCriteria || 'Not recorded'}</p></section>) : <p>No requirements are currently recorded.</p>}</>;
+      }
+      if (page === 11) return <><h1>Management considerations</h1><p>The generated document includes approved findings, open information gaps, evidence status and unresolved validation items for every application.</p><p>Unknown and inferred information remains clearly labelled and is not presented as a confirmed fact.</p></>;
+      return <><h1>Appendices and source record</h1><table className="preview-table"><tbody><tr><th>Project</th><td>{projectPreview.project}</td></tr><tr><th>Applications included</th><td>{projectPreview.systems.length}</td></tr><tr><th>Relationships recorded</th><td>{projectPreview.relationships.length}</td></tr><tr><th>Requirements included</th><td>{includeRequirements ? projectPreview.requirements.length : 0}</td></tr><tr><th>Generated</th><td>{projectPreview.date}</td></tr></tbody></table></>;
+    }
+    switch (page) {
+      case 1: return <><h1>{preview.system}</h1><h2>{preview.subtitle}</h2><p className="hint">{preview.project}<br />{preview.date}</p><h3>Current-state system assessment</h3><p>Generated from SystemScope assessment snapshot {preview.snapshot}.</p></>;
+      case 2: return <><h1>{preview.system}</h1><h2>Executive summary</h2><p>{preview.executive}</p><table className="preview-table"><thead><tr><th>Assessment area</th><th>Current status</th></tr></thead><tbody>{areaRows.map(a => <tr key={a.area}><td>{a.area}</td><td>{a.status}</td></tr>)}</tbody></table></>;
+      case 3: return <><h1>{preview.system}</h1><h2>Scope and assessment approach</h2><p>This document presents the current assessment information recorded for {preview.system} within {preview.project}.</p><table className="preview-table"><tbody><tr><th>Information completeness</th><td>{preview.completeness}%</td></tr><tr><th>Document readiness</th><td>{preview.readiness}%</td></tr><tr><th>Assessment snapshot</th><td>{preview.snapshot}</td></tr></tbody></table></>;
+      case 4: return <><h1>{preview.system}</h1><h2>System overview</h2><p>{preview.executive}</p><table className="preview-table"><thead><tr><th>Assessment area</th><th>Current status</th></tr></thead><tbody>{areaRows.map(a => <tr key={a.area}><td>{a.area}</td><td>{a.status}</td></tr>)}</tbody></table></>;
+      case 5: return <><h1>{preview.system}</h1><h2>System architecture &amp; technical design</h2>{(preview.architecture ?? []).length ? <table className="preview-table"><thead><tr><th>Attribute</th><th>Recorded value</th><th>Evidence status</th></tr></thead><tbody>{preview.architecture.map(r => <tr key={r.attribute}><td>{r.attribute}</td><td>{r.value}</td><td>{r.claim === 'Inference' ? 'Inferred' : 'Confirmed'}</td></tr>)}</tbody></table> : <p>No architecture information is currently recorded.</p>}</>;
+      case 6: return sectionPage('Database and data storage', 'database');
+      case 7: return sectionPage('Infrastructure and hosting', 'infrastructure');
+      case 8: return sectionPage('Integrations and data flows', 'integration');
+      case 9: return sectionPage('Data quality and governance', 'data quality');
+      case 10: return sectionPage('Security and access controls', 'security');
+      case 11: return <><h1>{preview.system}</h1><h2>Risks, findings and information gaps</h2>{preview.blocking.length ? <ul>{preview.blocking.map(issue => <li key={issue}>{issue}</li>)}</ul> : <p>No blocking issues are currently recorded.</p>}<table className="preview-table"><tbody><tr><th>Confirmed findings</th><td>{preview.confirmed}</td></tr><tr><th>Awaiting validation</th><td>{preview.awaiting}</td></tr><tr><th>Rejected</th><td>{preview.rejected}</td></tr></tbody></table></>;
+      default: return <><h1>{preview.system}</h1><h2>Appendices and source record</h2><table className="preview-table"><tbody><tr><th>Project</th><td>{preview.project}</td></tr><tr><th>Assessment date</th><td>{preview.date}</td></tr><tr><th>Snapshot</th><td>{preview.snapshot}</td></tr><tr><th>Template version</th><td>{preview.template}</td></tr><tr><th>Source references included</th><td>{includeSources ? 'Yes' : 'No'}</td></tr><tr><th>Security appendix included</th><td>{includeSecurity ? 'Yes' : 'No'}</td></tr></tbody></table></>;
+    }
+  };
   return (
     <div className="scan docs-preview">
       <header className="scan-head">
         <div>
           <small>WATER MONITORING SYSTEMS · DOCUMENTS</small>
-          <h1>{preview.system} market-scan document</h1>
-          <p>Preview validated assessment content and configure the document before generation.</p>
+          <h1>{documentScope === 'project' ? preview.project : preview.system} technical assessment document</h1>
+          <p>{documentScope === 'project' ? 'Generate one management-ready technical document covering every application in the project.' : 'Preview validated assessment content and configure the document before generation.'}</p>
           <p className="crumb"><button className="linkish" onClick={onBack}>Documents</button> / Water Monitoring Systems / {preview.system}</p>
           <div className="scan-pills"><span className="pill mute">Draft preview</span><span className="pill">{preview.completeness}% information complete</span></div>
         </div>
@@ -300,6 +354,7 @@ export function DocumentPreview({ catalogKey, onBack, onGenerated }: { catalogKe
       <div className="preview-grid">
         <aside className="panel pad-form">
           <h3>Document settings</h3>
+          <label>Document scope<select value={documentScope} onChange={e => setDocumentScope(e.target.value as 'project' | 'system')}><option value="project">All applications in this project</option><option value="system">This application only ({preview.system})</option></select></label>
           <label>Template<select defaultValue="Market Scan – System Assessment"><option>Market Scan – System Assessment</option></select></label>
           <label>Audience<select value={audience} onChange={e => setAudience(e.target.value)}><option>Internal market scan</option><option>External</option></select></label>
           <label>Assessment date<input type="date" defaultValue="2026-08-20" /></label>
@@ -310,6 +365,7 @@ export function DocumentPreview({ catalogKey, onBack, onGenerated }: { catalogKe
           </div>
           <label className="check"><input type="checkbox" checked={includeDiagrams} onChange={e => setIncludeDiagrams(e.target.checked)} /> Include diagrams</label>
           <label className="check"><input type="checkbox" checked={includeGaps} onChange={e => setIncludeGaps(e.target.checked)} /> Include risks and gaps</label>
+          <label className="check"><input type="checkbox" checked={includeRequirements} onChange={e => setIncludeRequirements(e.target.checked)} /> Include technical and business requirements</label>
           <label className="check"><input type="checkbox" checked={includeSources} onChange={e => setIncludeSources(e.target.checked)} /> Include source references</label>
           <label className="check"><input type="checkbox" checked={includeSecurity} onChange={e => setIncludeSecurity(e.target.checked)} /> Include security appendix</label>
           <h3>Sections</h3>
@@ -330,21 +386,7 @@ export function DocumentPreview({ catalogKey, onBack, onGenerated }: { catalogKe
             {latest && <a className="ghost compact" href={`/api/documents/${latest.id}/file`}>↓</a>}
           </div>
           <article className="paper" style={{ transform: `scale(${zoom / 100})`, transformOrigin: 'top center' }}>
-            <h1>{preview.system}</h1>
-            <h2>{preview.subtitle}</h2>
-            <p className="hint">{preview.project}<br />{preview.date}</p>
-            <h3>1. Executive summary</h3>
-            <p>{preview.executive}</p>
-            <table className="preview-table"><thead><tr><th>Assessment area</th><th>Current status</th></tr></thead>
-              <tbody>{preview.areaStatus?.filter(a => ['Architecture', 'Database', 'Infrastructure', 'Integrations'].some(x => a.area.includes(x))).map(a => <tr key={a.area}><td>{a.area.replace('System architecture & technical design', 'Architecture').replace('Infrastructure & hosting', 'Infrastructure').replace('Integrations & data flows', 'Integrations')}</td><td>{a.status}</td></tr>)}</tbody>
-            </table>
-            <h3>2. System architecture & technical design</h3>
-            <p>{preview.system} follows a legacy client/server architecture built on Oracle Forms. The system interfaces with an Oracle database and several external data exchange points remain under assessment.</p>
-            <table className="preview-table">
-              <tbody>
-                {(preview.architecture ?? []).slice(0, 2).map(r => <tr key={r.attribute}><td>{r.attribute}</td><td>{r.value}</td><td>{r.claim === 'Inference' ? 'Inferred' : 'Confirmed'}</td></tr>)}
-              </tbody>
-            </table>
+            {renderPage()}
             <p className="hint">SystemScope · {preview.system} assessment · Draft</p>
           </article>
         </section>

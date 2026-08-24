@@ -215,18 +215,43 @@ export function AssessmentsView({ onOpen }: { onOpen: (key: string, systemId: st
 }
 
 export function IntegrationsView() {
-  const [rows, setRows] = useState<{ id: string; name: string; systemName: string; sourceSystem: string; target: string; method: string; state: string; validation: string; owner: string; criticality: string }[]>([]);
+  type IntegrationRow = { id: string; projectId: string; name: string; systemName: string; sourceSystem: string; target: string; informationExchanged: string; method: string; state: string; validation: string; owner: string; criticality: string };
+  type LandscapeProject = { id: string; name: string; systems: { id: string; name: string }[] };
+  const [rows, setRows] = useState<IntegrationRow[]>([]);
+  const [projects, setProjects] = useState<LandscapeProject[]>([]);
+  const [projectId, setProjectId] = useState('');
   const [q, setQ] = useState('');
-  useEffect(() => { api<typeof rows>('/scan/integrations').then(setRows); }, []);
-  const shown = rows.filter(r => `${r.name} ${r.systemName} ${r.target} ${r.method}`.toLowerCase().includes(q.toLowerCase()));
+  const [state, setState] = useState('All states');
+  type IntegrationColumn = 'name' | 'systemName' | 'target' | 'flow' | 'method' | 'state' | 'validation';
+  const columns: { key: IntegrationColumn; label: string }[] = [{ key: 'name', label: 'Relationship' }, { key: 'systemName', label: 'Source application' }, { key: 'target', label: 'Destination application' }, { key: 'flow', label: 'Flow' }, { key: 'method', label: 'Method' }, { key: 'state', label: 'State' }, { key: 'validation', label: 'Validation' }];
+  const [columnFilters, setColumnFilters] = useState<Record<IntegrationColumn, string>>({ name: '', systemName: '', target: '', flow: '', method: '', state: '', validation: '' });
+  const [sort, setSort] = useState<{ key: IntegrationColumn; direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
+  useEffect(() => { api<LandscapeProject[]>('/projects').then(items => { setProjects(items); setProjectId(current => current || items[0]?.id || ''); }); }, []);
+  useEffect(() => { if (projectId) api<IntegrationRow[]>(`/scan/integrations?projectId=${projectId}`).then(setRows); }, [projectId]);
+  const project = projects.find(p => p.id === projectId);
+  const valueFor = (r: IntegrationRow, key: IntegrationColumn) => key === 'flow' ? `${r.sourceSystem} → ${r.target}` : String(r[key] ?? '');
+  const shown = rows.filter(r => `${r.name} ${r.systemName} ${r.target} ${r.method}`.toLowerCase().includes(q.toLowerCase()) && (state === 'All states' || r.state === state) && columns.every(c => valueFor(r, c.key).toLowerCase().includes(columnFilters[c.key].trim().toLowerCase())))
+    .sort((a, b) => valueFor(a, sort.key).localeCompare(valueFor(b, sort.key), undefined, { numeric: true, sensitivity: 'base' }) * (sort.direction === 'asc' ? 1 : -1));
+  const changeSort = (key: IntegrationColumn) => setSort(current => current.key === key ? { key, direction: current.direction === 'asc' ? 'desc' : 'asc' } : { key, direction: 'asc' });
+  const connected = new Set(rows.flatMap(r => [r.systemName, r.target]).filter(Boolean));
   return (
     <section className="panel">
-      <div className="panel-title"><div><h2>Integration catalogue</h2><p>Current-state, future-state, suspected and retired interfaces. Future-state records are never presented as current facts.</p></div></div>
+      <div className="panel-title"><div><h2>Landscape integration catalogue</h2><p>Relationships recorded against the selected project landscape. Future and suspected records are never presented as confirmed current facts.</p></div><label>Project or landscape<select value={projectId} onChange={e => setProjectId(e.target.value)}>{projects.map(p => <option value={p.id} key={p.id}>{p.name}</option>)}</select></label></div>
+      <div className="scan-kpis">
+        <article><small>Applications in landscape</small><strong>{project?.systems.length ?? 0}</strong></article>
+        <article><small>Recorded relationships</small><strong>{rows.length}</strong></article>
+        <article><small>Connected applications</small><strong>{connected.size}</strong></article>
+        <article><small>Require validation</small><strong>{rows.filter(r => !['Approved', 'SmeValidated', 'TechnicalReviewed'].includes(r.validation)).length}</strong></article>
+      </div>
+      <div className="filters"><select value={state} onChange={e => setState(e.target.value)}><option>All states</option><option>Current</option><option>Future</option><option>Suspected</option><option>Retired</option></select></div>
       <div className="filters"><input placeholder="Filter by system, target or method…" value={q} onChange={e => setQ(e.target.value)} /></div>
+      <div className="register-row integrations-heading">{columns.map(column => <button type="button" className="integration-sort" key={column.key} onClick={() => changeSort(column.key)}><b>{column.label}</b><span>{sort.key === column.key ? (sort.direction === 'asc' ? '▲' : '▼') : '↕'}</span></button>)}</div>
+      <div className="register-row integrations-heading integration-column-filters">{columns.map(column => <input key={column.key} aria-label={`Filter ${column.label}`} placeholder="Filter…" value={columnFilters[column.key]} onChange={e => setColumnFilters(current => ({ ...current, [column.key]: e.target.value }))} />)}</div>
       {shown.map(r => (
         <div className="register-row" key={r.id}>
           <span><b>{r.name}</b></span>
           <span>{r.systemName}</span>
+          <span>{r.target || 'Not recorded'}</span>
           <span>{r.sourceSystem} → {r.target}</span>
           <span>{r.method}</span>
           <span>{r.state}</span>

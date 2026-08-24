@@ -633,7 +633,9 @@ public static class MarketScanSeed
             false,
             true,
             ["Unvalidated current-state statements are labelled."],
-            [new MarketScanDocument.SystemSection(aquis.Name, aquis.Description, ["Front-end technology: Oracle Forms."], ["Database product: Oracle Database (inferred)."], ["Hosting location is to be confirmed."], ["Relationships with Groundwater remain unconfirmed."], ["Batch and data-flow processing is not yet confirmed."], ["Not assessed."], ["Deferred by current scope."], ["Support and release procedures are not documented."], ["Legacy Oracle Forms client/server; replacement constraints unknown."], [], [new MarketScanDocument.GapLine("Database version not confirmed", "Open", "Blocks database chapter")], ["AQUIS walkthrough transcript"])]);
+            [new MarketScanDocument.SystemSection(aquis.Name, aquis.Description, ["Front-end technology: Oracle Forms."], ["Database product: Oracle Database (inferred)."], ["Hosting location is to be confirmed."], ["Relationships with Groundwater remain unconfirmed."], ["Batch and data-flow processing is not yet confirmed."], ["Not assessed."], ["Deferred by current scope."], ["Support and release procedures are not documented."], ["Legacy Oracle Forms client/server; replacement constraints unknown."], [], [new MarketScanDocument.GapLine("Database version not confirmed", "Open", "Blocks database chapter")], ["AQUIS walkthrough transcript"])],
+            [],
+            []);
         var bytes = MarketScanDocument.Word(model);
         var checksum = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes));
         GeneratedDocument Doc(string version, string format, string status, DateTimeOffset at, string activity) => new()
@@ -770,21 +772,37 @@ public static class MarketScanSeed
         Fact(db, project, gwdb, ScanDomainKind.Architecture, "Front-end technology", "Oracle Forms / GWPlot", ValidationStatus.AnalystReviewed, ClaimType.ExplicitStatement, "High", null, "", "");
         Fact(db, project, gwdb, ScanDomainKind.Database, "Database product", "Oracle Database", ValidationStatus.AnalystReviewed, ClaimType.ExplicitStatement, "High", null, "", "");
         Fact(db, project, systems["hydstra"], ScanDomainKind.Architecture, "Front-end technology", "Hydstra / Hydrotel", ValidationStatus.AnalystReviewed, ClaimType.ExplicitStatement, "High", null, "", "");
-        db.Integrations.Add(new Integration
-        {
-            ProjectId = project.Id,
-            SystemId = gwdb.Id,
-            Name = "GWDB drill log / plot tools",
-            SourceSystem = "GWDB",
-            Target = "GWPlot / DRN",
-            BusinessPurpose = "Groundwater plot and drill-log receival.",
-            Direction = "Internal",
-            State = InformationState.Current,
-            Method = "Application module",
-            Owner = "Groundwater",
-            Validation = ValidationStatus.AnalystReviewed,
-        });
+        db.Integrations.AddRange(
+            new Integration
+            {
+                ProjectId = project.Id, SystemId = gwdb.Id, Name = "GWDB drill log / plot tools",
+                SourceSystem = "GWDB", Target = "GWPlot / DRN", BusinessPurpose = "Groundwater plot and drill-log receival.",
+                Direction = "Internal", State = InformationState.Current, Method = "Application module",
+                Owner = "Groundwater", Validation = ValidationStatus.AnalystReviewed,
+            },
+            Relationship(project, systems["gauges"], systems["hydstra"], "Gauges to Hydstra", "Time-series gauge and ground-station observations."),
+            Relationship(project, systems["wasp"], systems["hydstra"], "WASP to Hydstra", "Surface-water sample information."),
+            Relationship(project, systems["wfieldapp"], gwdb, "Field application to Groundwater", "Groundwater sample metadata captured in the field."),
+            Relationship(project, systems["bls"], gwdb, "Bore Location System to Groundwater", "Bore-location and drilling records."));
     }
+
+    static Integration Relationship(Project project, AssessedSystem source, AssessedSystem target, string name, string purpose) => new()
+    {
+        ProjectId = project.Id,
+        SystemId = source.Id,
+        Name = name,
+        SourceSystem = source.Name,
+        Target = target.Name,
+        BusinessPurpose = purpose,
+        InformationExchanged = purpose,
+        Direction = "Outbound",
+        State = InformationState.Current,
+        InterfaceType = "Data",
+        Method = "Unknown",
+        Frequency = "Unknown",
+        Owner = source.BusinessOwner,
+        Validation = ValidationStatus.AnalystReviewed,
+    };
 
     static void Fact(
         AppDbContext db,

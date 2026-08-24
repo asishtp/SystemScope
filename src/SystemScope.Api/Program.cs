@@ -46,7 +46,7 @@ api.MapWorkflow();
 api.MapDemoViews();
 app.MapGet("/health", () => Results.Ok(new { status = "Healthy" }));
 api.MapGet("/me",(ClaimsPrincipal u)=>new{name=u.Identity?.Name??"Local Assessor",roles=u.FindAll(ClaimTypes.Role).Select(x=>x.Value)});
-api.MapGet("/dashboard",async(AppDbContext db)=>await ScanApi.Dashboard(db));
+api.MapGet("/dashboard",async(Guid? projectId,AppDbContext db)=>await ScanApi.Dashboard(db,projectId));
 api.MapGet("/projects",async(AppDbContext db)=>await db.Projects.Include(x=>x.Systems).OrderByDescending(x=>x.UpdatedAt).ToListAsync());
 api.MapPost("/projects",async(ProjectInput i,AppDbContext db,AuditService audit,ClaimsPrincipal u)=>{var p=new Project{Name=i.Name.Trim(),Objective=i.Objective.Trim(),Scope=i.Scope.Trim(),Owner=i.Owner.Trim(),StartDate=i.StartDate,TargetDate=i.TargetDate};db.Projects.Add(p);await audit.Record(db,u,"Create","Project",p.Id,p.Name,p.Id);await db.SaveChangesAsync();return Results.Created($"/api/projects/{p.Id}",p);});
 api.MapGet("/projects/{id:guid}",async(Guid id,AppDbContext db)=>await db.Projects.Include(x=>x.Systems).FirstOrDefaultAsync(x=>x.Id==id) is{}p?Results.Ok(p):Results.NotFound());

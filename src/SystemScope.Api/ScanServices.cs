@@ -383,6 +383,13 @@ public static class MarketScanDocument
         Para(body, model.Scope);
         Heading(body, "3. Landscape overview", "Heading1");
         Para(body, model.Landscape);
+        Heading(body, "3.1 Application relationships", "Heading2");
+        if (model.Relationships.Count == 0) Para(body, "No application relationships are currently recorded for this project.");
+        foreach (var relationship in model.Relationships) Para(body, relationship);
+        Heading(body, "3.2 Technical and business requirements", "Heading2");
+        if (model.Requirements.Count == 0) Para(body, "No approved or draft requirements are currently recorded for this project.");
+        foreach (var requirement in model.Requirements)
+            Para(body, $"[{requirement.Priority}] {requirement.Title} ({requirement.Type}, {requirement.Category}){(requirement.Mandatory ? " — Mandatory" : " — Desirable")}. {requirement.Description} Acceptance criteria: {requirement.AcceptanceCriteria}");
         foreach (var system in model.Systems)
         {
             Heading(body, $"4. System overview — {system.Name}", "Heading1");
@@ -494,7 +501,9 @@ public static class MarketScanDocument
         bool IncludeSecurity,
         bool IncludeGaps,
         List<string> Warnings,
-        List<SystemSection> Systems);
+        List<SystemSection> Systems,
+        List<string> Relationships,
+        List<RequirementLine> Requirements);
 
     public record SystemSection(
         string Name,
@@ -514,6 +523,7 @@ public static class MarketScanDocument
 
     public record FindingLine(string Title, string Severity, string Description);
     public record GapLine(string MissingInformation, string Status, string MarketScanImpact);
+    public record RequirementLine(string Title, string Description, string Type, string Category, string Priority, bool Mandatory, string AcceptanceCriteria);
 }
 
 public static class ScanNarrative
