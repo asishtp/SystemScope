@@ -179,8 +179,73 @@ function Overview({ data, gaps, onOpen, onEvidence }: { data: ScanWorkspace; gap
       if (priority.length === 3) break;
     }
   }
+  const owned = Boolean(data.system.businessOwner && data.system.technicalOwner);
+  const confirmedRelationships = data.integrations.filter(i => i.validation === 'Confirmed' || i.validation === 'Approved' || i.validation === 'SmeValidated').length;
+  const highRisks = data.findings.filter(f => f.severity === 'High' || f.severity === 'Critical').length;
+  const outcomes: { icon: string; title: string; description: string; signal: string; action: string; tab: TabId }[] = [
+    {
+      icon: '◎',
+      title: 'Map the as-is landscape',
+      description: 'Document the current applications, technology, infrastructure, and system context.',
+      signal: `${data.domains.filter(d => d.completeness > 0).length} of ${data.domains.length} domains started`,
+      action: 'View landscape',
+      tab: 'diagrams',
+    },
+    {
+      icon: '⇄',
+      title: 'Understand relationships',
+      description: 'Trace integrations, data flows, batch processes, and upstream or downstream dependencies.',
+      signal: `${data.integrations.length} relationships · ${confirmedRelationships} confirmed`,
+      action: 'Review relationships',
+      tab: 'integrations',
+    },
+    {
+      icon: '◫',
+      title: 'Assess maturity and ownership',
+      description: 'Measure information completeness, validation confidence, ownership, and technical exposure.',
+      signal: `${data.scan.informationCompleteness}% complete · ${owned ? 'Owners assigned' : 'Ownership incomplete'}`,
+      action: 'Review assessment',
+      tab: 'architecture',
+    },
+    {
+      icon: '△',
+      title: 'Identify gaps and opportunities',
+      description: 'Surface missing information, risks, duplication, constraints, and improvement opportunities.',
+      signal: `${gaps.length} open gaps · ${highRisks} high/critical risks`,
+      action: 'Review findings',
+      tab: 'findings',
+    },
+    {
+      icon: '▤',
+      title: 'Support decisions',
+      description: 'Turn validated findings into a clear evidence base for investment, rationalisation, integration, or due diligence.',
+      signal: `${readinessLabel(data.scan.documentReadiness)} · ${data.documents.length} document${data.documents.length === 1 ? '' : 's'}`,
+      action: 'Preview decision pack',
+      tab: 'preview',
+    },
+  ];
   return (
     <div className="scan-overview">
+      <section className="market-outcomes" aria-labelledby="market-outcomes-title">
+        <div className="market-outcomes-head">
+          <div>
+            <small>MARKET SCAN PURPOSE</small>
+            <h2 id="market-outcomes-title">Market scan outcomes</h2>
+            <p>Build an evidence-backed view of the current landscape and turn it into decision-ready insight.</p>
+          </div>
+        </div>
+        <div className="outcome-grid">
+          {outcomes.map((outcome, index) => (
+            <article className="outcome-card" key={outcome.title}>
+              <div className="outcome-title"><span>{outcome.icon}</span><small>OUTCOME {index + 1}</small></div>
+              <h3>{outcome.title}</h3>
+              <p>{outcome.description}</p>
+              <strong>{outcome.signal}</strong>
+              <button className="linkish" onClick={() => onOpen(outcome.tab)}>{outcome.action} →</button>
+            </article>
+          ))}
+        </div>
+      </section>
       <div className="domain-grid">
         {data.domains.flatMap(d => {
           const card = (
