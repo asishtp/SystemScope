@@ -44,7 +44,7 @@ The intended development host sits beside WaterSolutions:
 
 ```text
 Resource group  rg-rwf-dataplatform-dev
-Web App         app-systemscope-web-dev
+Web App         app-water-ws-api-dev
 Plan            same App Service plan as app-water-ws-web-dev
 SQL             sql-water-ws-dev / sqldb-water-ws-local
 ```
@@ -62,12 +62,12 @@ After the first deploy, grant the Web App managed identity database access as an
 sqlcmd -S sql-water-ws-dev.database.windows.net -d sqldb-water-ws-local -G -I -i infra/Grant-AppService-SqlAccess.sql
 ```
 
-Register `https://app-systemscope-web-dev.azurewebsites.net` as an Entra SPA redirect URI on client `e020e24c-ff88-4937-8860-0bedb9edfadf` if the deploy script could not add it.
+Register `https://app-water-ws-api-dev.azurewebsites.net` as an Entra SPA redirect URI on client `e020e24c-ff88-4937-8860-0bedb9edfadf` if the deploy script could not add it.
 
 To provision the Web App from Bicep onto an existing plan instead of the script:
 
 ```powershell
-az deployment group create --resource-group rg-rwf-dataplatform-dev --template-file infra/main.bicep --parameters appName=app-systemscope-web-dev existingPlanName=<plan-name> entraSpaClientId=e020e24c-ff88-4937-8860-0bedb9edfadf entraApiClientId=d40a5006-b97d-485d-b007-e2268d00f165
+az deployment group create --resource-group rg-rwf-dataplatform-dev --template-file infra/main.bicep --parameters appName=app-water-ws-api-dev existingPlanName=<plan-name> entraSpaClientId=e020e24c-ff88-4937-8860-0bedb9edfadf entraApiClientId=d40a5006-b97d-485d-b007-e2268d00f165
 ```
 
 The workflow in `.github/workflows/deploy.yml` produces and deploys the single combined artifact using workload identity federation. Configure the three Azure repository secrets and `AZURE_WEBAPP_NAME` repository variable before enabling it.

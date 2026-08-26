@@ -9,7 +9,7 @@
 [CmdletBinding()]
 param(
     [string] $ResourceGroup = 'rg-rwf-dataplatform-dev',
-    [string] $WebAppName = 'app-systemscope-web-dev',
+    [string] $WebAppName = 'app-water-ws-api-dev',
     [string] $SiblingWebAppName = 'app-water-ws-web-dev',
     [string] $SqlServerFqdn = 'sql-water-ws-dev.database.windows.net',
     [string] $SqlDatabase = 'sqldb-water-ws-local',
@@ -122,7 +122,7 @@ function Publish-App {
     }
 }
 
-function Deploy-Zip {
+function Deploy-Zip($webApp) {
     if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
     Write-Host "Zipping $publishDir (Linux-safe tar zip)"
     $zipFull = (Resolve-Path -LiteralPath (Split-Path $zipPath -Parent)).Path
@@ -132,8 +132,10 @@ function Deploy-Zip {
         tar.exe -a -cf (Join-Path $zipFull $zipName) *
     }
     finally { Pop-Location }
-    Write-Host "Setting Linux startup command"
-    az webapp config set --resource-group $ResourceGroup --name $WebAppName --startup-file 'dotnet SystemScope.Api.dll' --output none
+    if ($webApp.kind -match 'linux') {
+        Write-Host 'Setting Linux startup command.'
+        az webapp config set --resource-group $ResourceGroup --name $WebAppName --startup-file 'dotnet SystemScope.Api.dll' --output none
+    }
     Write-Host "Deploying $zipPath to $WebAppName"
     az webapp deploy --resource-group $ResourceGroup --name $WebAppName --src-path $zipPath --type zip --timeout 1800
 }
@@ -156,7 +158,7 @@ $sibling = Get-SiblingApp
 $app = Ensure-WebApp $sibling
 Set-AppSettings
 Publish-App
-Deploy-Zip
+Deploy-Zip $app
 
 $url = "https://$($app.defaultHostName)"
 try { Add-SpaRedirect $url } catch { Write-Warning "Could not add Entra redirect URI automatically: $_" }
