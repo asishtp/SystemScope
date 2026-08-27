@@ -86,7 +86,8 @@ public static class ScanScoring
         IReadOnlyCollection<ScanFact> facts,
         IReadOnlyCollection<InformationGap> gaps,
         IReadOnlyCollection<ExtractedClaim> claims,
-        IReadOnlyCollection<Finding> findings)
+        IReadOnlyCollection<Finding> findings,
+        IReadOnlyDictionary<ScanDomainKind, (int extraFilled, int extraApplicable)>? extra = null)
     {
         var domainPercents = new Dictionary<ScanDomainKind, int>();
         var weighted = 0;
@@ -102,6 +103,15 @@ public static class ScanScoring
             var domainFacts = facts.Where(f => f.Domain == kind && f.State != InformationState.Future).ToList();
             var filled = attrs.Count(a => domainFacts.Any(f => f.Attribute.Equals(a, StringComparison.OrdinalIgnoreCase) && IsFilled(f.Value)));
             var applicable = required is DomainRequirement.Deferred ? 0 : attrs.Length;
+            var extraFilled = 0;
+            var extraApplicable = 0;
+            if (required is not DomainRequirement.Deferred && extra is not null && extra.TryGetValue(kind, out var slot))
+            {
+                extraFilled = slot.extraFilled;
+                extraApplicable = slot.extraApplicable;
+            }
+            filled += extraFilled;
+            applicable += extraApplicable;
             var pct = required is DomainRequirement.Deferred ? 0 : Percent(filled, applicable);
             domainPercents[kind] = pct;
             if (applicable > 0)
@@ -232,7 +242,8 @@ public static class ScanWorkspace
         var claims = await db.Claims.Where(x => x.AssessedSystemId == assessedSystemId).ToListAsync();
         var findings = await db.Findings.Where(x => x.SystemId == assessedSystemId).ToListAsync();
         var evidence = await db.Evidence.Where(x => x.SystemId == assessedSystemId).ToListAsync();
-        var (info, validation, readiness, percents) = ScanScoring.Score(scan.Domains, facts, gaps, claims, findings);
+        var extras = await CoverageExtras(db, scan.MasterSystemId);
+        var (info, validation, readiness, percents) = ScanScoring.Score(scan.Domains, facts, gaps, claims, findings, extras);
         scan.InformationCompleteness = info;
         scan.ValidationCompleteness = validation;
         scan.DocumentReadiness = readiness;
@@ -250,6 +261,27 @@ public static class ScanWorkspace
             domain.LastUpdatedAt = DateTimeOffset.UtcNow;
         }
         await db.SaveChangesAsync();
+    }
+
+    public static async Task<Dictionary<ScanDomainKind, (int extraFilled, int extraApplicable)>> CoverageExtras(AppDbContext db, Guid masterSystemId)
+    {
+        var extras = new Dictionary<ScanDomainKind, (int extraFilled, int extraApplicable)>();
+        if (masterSystemId == Guid.Empty) return extras;
+        var capStates = await (
+            from link in db.SystemCapabilities
+            join cap in db.BusinessCapabilities on link.CapabilityId equals cap.Id
+            where link.MasterSystemId == masterSystemId && !link.Archived && !cap.Archived
+            select link.State).ToListAsync();
+        if (capStates.Count > 0)
+            extras[ScanDomainKind.Architecture] = (capStates.Any(s => s == InformationState.Current) ? 1 : 0, 1);
+        var assetStates = await (
+            from link in db.SystemInformationAssets
+            join asset in db.InformationAssets on link.InformationAssetId equals asset.Id
+            where link.MasterSystemId == masterSystemId && !link.Archived && !asset.Archived
+            select link.State).ToListAsync();
+        if (assetStates.Count > 0)
+            extras[ScanDomainKind.DataQuality] = (assetStates.Any(s => s == InformationState.Current) ? 1 : 0, 1);
+        return extras;
     }
 
     static string[] DomainHints(ScanDomainKind kind) => kind switch
@@ -287,6 +319,41 @@ public static class ScanWorkspace
         var dataDomains = await db.DataDomains.Where(x => x.AssessedSystemId == system.Id && !x.Archived).ToListAsync();
         var security = await db.SecurityControls.Where(x => x.AssessedSystemId == system.Id && !x.Archived).ToListAsync();
         var documents = await db.GeneratedDocuments.Where(x => x.ProjectId == system.ProjectId).OrderByDescending(x => x.CreatedAt).Take(10).Select(x => new { x.Id, x.Title, x.Audience, x.Status, x.CreatedAt, x.FileName, x.Warnings }).ToListAsync();
+        var capabilities = master is null ? [] : await (
+            from link in db.SystemCapabilities
+            join cap in db.BusinessCapabilities on link.CapabilityId equals cap.Id
+            where link.MasterSystemId == master.Id && !link.Archived && !cap.Archived
+            orderby cap.Level, cap.Name
+            select new
+            {
+                link.Id,
+                capabilityId = cap.Id,
+                cap.CatalogKey,
+                cap.Name,
+                level = cap.Level.ToString(),
+                cap.Domain,
+                cap.Category,
+                role = link.Role.ToString(),
+                link.MaturityScore,
+                state = link.State.ToString(),
+                validation = link.Validation.ToString(),
+            }).ToListAsync();
+        var informationAssets = master is null ? [] : await (
+            from link in db.SystemInformationAssets
+            join asset in db.InformationAssets on link.InformationAssetId equals asset.Id
+            where link.MasterSystemId == master.Id && !link.Archived && !asset.Archived
+            orderby asset.Name
+            select new
+            {
+                link.Id,
+                informationAssetId = asset.Id,
+                asset.CatalogKey,
+                asset.Name,
+                classification = asset.Classification.ToString(),
+                role = link.Role.ToString(),
+                state = link.State.ToString(),
+                validation = link.Validation.ToString(),
+            }).ToListAsync();
         return new
         {
             system = new
@@ -357,6 +424,8 @@ public static class ScanWorkspace
             dataDomains,
             security,
             documents,
+            capabilities,
+            informationAssets,
             requiredAttributes = ScanScoring.RequiredAttributes.ToDictionary(x => x.Key.ToString(), x => x.Value),
         };
     }

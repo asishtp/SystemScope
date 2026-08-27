@@ -28,8 +28,10 @@ type Profile = {
   priorityGaps: { id: string; missingInformation: string; domain: string; status: string }[];
   publishedDocuments: { id: string; title: string; versionLabel: string; publishedVersion: string; classification: string; status: string; recordId: string; fileName: string; format: string }[];
   findings: { id: string; title: string; type: string; domain: string; confidence: string; sources: number; status: string }[];
-  evidence: { id: string; title: string; sourceType: string; completeness: string; updatedAt: string }[];
+  evidence: { id: string; title: string; sourceType: string; completeness: string; updatedAt: string; url?: string; links?: { entityType: string; entityId: string }[] }[];
   activity: { timestamp: string; actorName: string; action: string; entityType: string; detail: string }[];
+  capabilities?: { id: string; capabilityId: string; catalogKey: string; name: string; level: string; role: string; maturityScore?: number | null; state: string; validation: string }[];
+  informationAssets?: { id: string; informationAssetId: string; catalogKey: string; name: string; classification: string; role: string; state: string; validation: string }[];
 };
 
 type Payload = {
@@ -37,7 +39,7 @@ type Payload = {
   profile: Profile;
 };
 
-const TABS = ['Overview', 'Technology', 'Integrations', 'Data', 'Evidence', 'Findings', 'Documents', 'History'] as const;
+const TABS = ['Overview', 'Capabilities', 'Technology', 'Integrations', 'Data', 'Evidence', 'Findings', 'Documents', 'History'] as const;
 
 export function SystemProfile({
   catalogKey,
@@ -106,6 +108,11 @@ export function SystemProfile({
             <div className="panel-title"><div><h2>System summary</h2></div><button className="ghost compact">Edit summary</button></div>
             <p>{p.summary}</p>
             <span className={pillClass(p.validationLabel)}>{p.validationLabel}</span>
+            {!!p.capabilities?.length && (
+              <div className="chip-row" style={{ marginTop: 12 }}>
+                {p.capabilities.map(c => <span className="tech-chip" key={c.id}>{c.name}</span>)}
+              </div>
+            )}
           </section>
           <section className="panel">
             <div className="panel-title"><div><h2>Assessment coverage</h2></div></div>
@@ -230,13 +237,60 @@ export function SystemProfile({
         </div>
       )}
 
+      {tab === 'Capabilities' && (
+        <section className="panel">
+          <div className="panel-title"><div><h2>Business capabilities</h2><p>What this system provides, independent of technology.</p></div></div>
+          {!p.capabilities?.length && <p className="pad">No structured capabilities are linked yet. Legacy text remains on the system record until coverage is mapped.</p>}
+          {p.capabilities?.map(c => (
+            <div className="side-row" key={c.id}>
+              <span><b>{c.name}</b><small>{c.level} · {c.role}{c.maturityScore ? ` · maturity ${c.maturityScore}` : ''}</small></span>
+              <span className={pillClass(c.validation)}>{c.validation}</span>
+            </div>
+          ))}
+        </section>
+      )}
       {tab === 'Technology' && <section className="panel">{p.technology.map(t => <div className="attr-row" key={t.name}><span>{t.name}</span><span>{t.value}</span><span className={pillClass(t.status)}>{t.status}</span></div>)}</section>}
       {tab === 'Integrations' && <section className="panel">{p.relationships.map(r => <div className="side-row" key={r.name}><span><b>{r.name}</b><small>{r.detail}</small></span><span className={pillClass(r.status)}>{r.status}</span></div>)}</section>}
-      {tab === 'Evidence' && <section className="panel">{p.evidence.map(e => <div className="side-row" key={e.id}><span>📄 {e.title}</span><span className={pillClass(e.completeness)}>{e.completeness}</span></div>)}</section>}
+      {tab === 'Evidence' && (
+        <section className="panel">
+          <div className="panel-title"><div><h2>Evidence</h2><p>HTTPS sources linked to this system. Use Add evidence to register another approved-host URL.</p></div></div>
+          {p.evidence.map(e => (
+            <div className="side-row" key={e.id}>
+              <span>
+                <b>{e.title}</b>
+                <small>{e.sourceType}{e.links?.length ? ` · ${e.links.length} linked record${e.links.length === 1 ? '' : 's'}` : ''}</small>
+              </span>
+              <span className={pillClass(e.completeness)}>{e.completeness}</span>
+            </div>
+          ))}
+          {!p.evidence.length && <p className="pad">No evidence registered yet.</p>}
+          <div className="pad"><button className="primary" onClick={() => onEvidence(catalogKey)}>Add evidence</button></div>
+        </section>
+      )}
       {tab === 'Findings' && <section className="panel">{p.findings.map(f => <div className="side-row" key={f.id}><span><b>{f.title}</b></span><span className={pillClass(f.status)}>{f.status}</span></div>)}</section>}
       {tab === 'Documents' && <section className="panel pad-form">{p.publishedDocuments.map(d => <button key={d.id} className="side-row" onClick={() => onOpenPublished(d.recordId)}><span><b>{d.title}</b></span><span className="pill">{d.status}</span></button>)}<button className="primary" onClick={() => onOpenDocuments(catalogKey)}>Open documents hub</button></section>}
       {tab === 'History' && <section className="panel">{p.activity.map(a => <div className="audit-row" key={a.timestamp + a.detail}><span>◴</span><div><b>{a.detail}</b><small>{a.actorName} · {formatStamp(a.timestamp)}</small></div></div>)}</section>}
-      {tab === 'Data' && <section className="panel pad-form"><p>Open the data-quality assessment to capture domains, owners and quality ratings.</p><button className="primary" onClick={() => onOpenAssessment(catalogKey, 'data')}>Open data assessment</button></section>}
+      {tab === 'Data' && (
+        <section className="panel">
+          <div className="panel-title">
+            <div>
+              <h2>Information assets</h2>
+              <p>Business data objects. Quality ratings remain on data-quality domains, not on these assets.</p>
+            </div>
+          </div>
+          {!p.informationAssets?.length && <p className="pad">No information assets are linked yet.</p>}
+          {p.informationAssets?.map(a => (
+            <div className="side-row" key={a.id}>
+              <span><b>{a.name}</b><small>{a.classification} · {a.role}</small></span>
+              <span className={pillClass(a.validation)}>{a.validation}</span>
+            </div>
+          ))}
+          <div className="pad-form">
+            <p>Open the data-quality assessment to capture domains, owners and quality ratings.</p>
+            <button className="primary" onClick={() => onOpenAssessment(catalogKey, 'data')}>Open data assessment</button>
+          </div>
+        </section>
+      )}
 
       <footer className="docs-foot">
         <span>{name} · System record</span>

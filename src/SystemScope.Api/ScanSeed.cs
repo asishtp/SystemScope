@@ -146,6 +146,350 @@ public static class MarketScanSeed
         await db.SaveChangesAsync();
     }
 
+    public static async Task EnsurePhase1Registers(AppDbContext db)
+    {
+        var l1 = await UpsertCapability(db, "groundwater-operations", "Groundwater operations", null, CapabilityLevel.L1, "Groundwater", "Value chain", Criticality.Critical, "Groundwater", "Enterprise groundwater operations spanning registration, monitoring, testing and logging.");
+        var l2 = new (string Key, string Name, string Category, Criticality Crit, string Description)[]
+        {
+            ("bore-registration", "Bore Registration", "Registration", Criticality.Critical, "Register and maintain groundwater bores as business assets."),
+            ("water-level-monitoring", "Water Level Monitoring", "Monitoring", Criticality.Critical, "Capture and maintain water-level observations against bores and aquifers."),
+            ("water-quality-monitoring", "Water Quality Monitoring", "Monitoring", Criticality.High, "Capture water-quality results associated with groundwater bores."),
+            ("pump-testing", "Pump Testing", "Testing", Criticality.High, "Record pump tests used to characterise bore and aquifer performance."),
+            ("geological-logging", "Geological Logging", "Logging", Criticality.High, "Capture geological drill logs and related plot products."),
+        };
+        var coverage = new List<BusinessCapability>();
+        foreach (var spec in l2)
+            coverage.Add(await UpsertCapability(db, spec.Key, spec.Name, l1.Id, CapabilityLevel.L2, "Groundwater", spec.Category, spec.Crit, "Groundwater", spec.Description));
+
+        var assets = new (string Key, string Name, InformationAssetClassification Class, string Owner, string Steward, string Retention, string Regulatory, string Definition)[]
+        {
+            ("bore", "Bore", InformationAssetClassification.Sensitive, "Groundwater", "Groundwater data steward", "Life of bore + 7 years", "Public Records Act 2023 (Qld)", "A registered groundwater bore as a business data asset."),
+            ("aquifer", "Aquifer", InformationAssetClassification.Internal, "Groundwater", "Hydrogeology", "Permanent", "", "An aquifer unit described independently of any physical table."),
+            ("water-level", "Water Level", InformationAssetClassification.Internal, "Groundwater", "Groundwater data steward", "7 years", "Public Records Act 2023 (Qld)", "A water-level observation associated with a bore and aquifer."),
+            ("water-quality-result", "Water Quality Result", InformationAssetClassification.Sensitive, "Groundwater", "Water quality SME", "7 years", "Information Privacy Act 2009 (Qld) where personal", "A water-quality result recorded against a groundwater bore."),
+        };
+        var assetRows = new Dictionary<string, InformationAsset>();
+        foreach (var spec in assets)
+            assetRows[spec.Key] = await UpsertAsset(db, spec);
+
+        var capAsset = new (string Cap, string[] Assets)[]
+        {
+            ("bore-registration", ["bore"]),
+            ("water-level-monitoring", ["bore", "aquifer", "water-level"]),
+            ("water-quality-monitoring", ["bore", "water-quality-result"]),
+            ("pump-testing", ["bore", "aquifer"]),
+            ("geological-logging", ["bore"]),
+        };
+        foreach (var pair in capAsset)
+        {
+            var cap = coverage.First(c => c.CatalogKey == pair.Cap);
+            foreach (var key in pair.Assets)
+                await UpsertCapabilityAsset(db, cap.Id, assetRows[key].Id);
+        }
+
+        var gwdb = await db.MasterSystems.FirstOrDefaultAsync(x => x.CatalogKey == "gwdb" && !x.Archived);
+        if (gwdb is not null)
+        {
+            foreach (var cap in coverage)
+                await UpsertCoverage(db, gwdb.Id, cap.Id);
+            foreach (var asset in assetRows.Values)
+                await UpsertAssetCoverage(db, gwdb.Id, asset.Id);
+            await CatalogApi.DeriveBusinessCapabilities(db, gwdb.Id);
+            await db.SaveChangesAsync();
+            await ScanWorkspace.Recalculate(db, (await db.Systems.FirstAsync(s => s.MasterSystemId == gwdb.Id && s.CatalogKey == "gwdb")).Id);
+
+            var liveL2 = await (
+                from link in db.SystemCapabilities
+                join cap in db.BusinessCapabilities on link.CapabilityId equals cap.Id
+                where link.MasterSystemId == gwdb.Id && !link.Archived && !cap.Archived && cap.Level == CapabilityLevel.L2
+                select link.Id).CountAsync();
+            if (liveL2 < 5)
+                throw new InvalidOperationException($"Phase 1 seed expected at least 5 live L2 GWDB capability coverage rows, found {liveL2}.");
+            var liveSoR = await db.SystemInformationAssets.CountAsync(x => x.MasterSystemId == gwdb.Id && !x.Archived && x.Role == InformationAssetRole.SystemOfRecord);
+            if (liveSoR < 4)
+                throw new InvalidOperationException($"Phase 1 seed expected 4 live GWDB information-asset SoR rows, found {liveSoR}.");
+        }
+
+        await BackfillIntegrationTypes(db);
+        await EnrichGwdbIntegrations(db);
+        await UpsertGwdbEvidence(db);
+        await UpsertEndStateEvidenceLinks(db);
+        await AssertAquisCompletenessUnchanged(db);
+    }
+
+    static async Task BackfillIntegrationTypes(AppDbContext db)
+    {
+        foreach (var item in await db.Integrations.Where(x => !x.Archived).ToListAsync())
+        {
+            if (!string.IsNullOrWhiteSpace(item.Protocol) || !string.IsNullOrWhiteSpace(item.DataFormat) || item.IntegrationType != IntegrationType.Api)
+                continue;
+            if (string.Equals(item.Method, "API", StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(item.Method))
+            {
+                IntegrationTypes.ApplyMapped(item, item.Method, null, null, null);
+                continue;
+            }
+            IntegrationTypes.ApplyMapped(item, item.Method, null, null, null);
+        }
+        await db.SaveChangesAsync();
+    }
+
+    static async Task EnrichGwdbIntegrations(AppDbContext db)
+    {
+        var specs = new (string SystemKey, string Name, string CatalogKey, IntegrationType Type, string Protocol, string Format, string Source, string Target, string Purpose, string Support)[]
+        {
+            ("gwdb", "GWDB drill log / plot tools", "gwdb-gwplot-drn", IntegrationType.Manual, "Oracle Forms module", "Relational", "GWDB", "GWPlot / DRN", "Groundwater plot and drill-log receival.", "Groundwater"),
+            ("wfieldapp", "Field application to Groundwater", "wfieldapp-gwdb-sample-metadata", IntegrationType.Api, "HTTPS", "JSON", "Water Monitoring Field Application", "Groundwater", "Groundwater sample metadata captured in the field.", "Digital and ICT"),
+            ("bls", "Bore Location System to Groundwater", "bls-gwdb-bore-location", IntegrationType.DatabaseLink, "Oracle DB link", "Relational", "Bore Location System", "Groundwater", "Bore-location and drilling records.", "Groundwater"),
+        };
+        foreach (var spec in specs)
+        {
+            var catalog = await UpsertIntegrationCatalog(db, spec);
+            var system = await db.Systems.FirstOrDefaultAsync(x => x.CatalogKey == spec.SystemKey && !x.Archived);
+            if (system is null) continue;
+            var matches = await db.Integrations.Where(x => x.SystemId == system.Id && x.Name == spec.Name && !x.Archived).ToListAsync();
+            if (matches.Count == 0) continue;
+            var item = matches[0];
+            item.IntegrationType = spec.Type;
+            item.Protocol = spec.Protocol;
+            item.DataFormat = spec.Format;
+            item.CatalogId = catalog.Id;
+            item.SourceSystem = spec.Source;
+            item.Target = spec.Target;
+            item.BusinessPurpose = spec.Purpose;
+        }
+        await db.SaveChangesAsync();
+
+        foreach (var name in new[] { "GWDB drill log / plot tools", "Field application to Groundwater", "Bore Location System to Groundwater" })
+        {
+            var count = await db.Integrations.CountAsync(x => x.Name == name && !x.Archived);
+            if (count != 1)
+                throw new InvalidOperationException($"Phase 1 seed expected exactly one '{name}' integration, found {count}.");
+        }
+    }
+
+    static async Task<IntegrationCatalog> UpsertIntegrationCatalog(AppDbContext db, (string SystemKey, string Name, string CatalogKey, IntegrationType Type, string Protocol, string Format, string Source, string Target, string Purpose, string Support) spec)
+    {
+        var existing = await db.IntegrationCatalogs.FirstOrDefaultAsync(x => x.CatalogKey == spec.CatalogKey);
+        if (existing is null)
+        {
+            existing = new IntegrationCatalog { CatalogKey = spec.CatalogKey };
+            db.IntegrationCatalogs.Add(existing);
+        }
+        existing.Archived = false;
+        existing.Name = spec.Name;
+        existing.Purpose = spec.Purpose;
+        existing.SourceLabel = spec.Source;
+        existing.TargetLabel = spec.Target;
+        existing.IntegrationType = spec.Type;
+        existing.Protocol = spec.Protocol;
+        existing.DataFormat = spec.Format;
+        existing.SupportTeam = spec.Support;
+        existing.Criticality = "Moderate";
+        var sourceMaster = await db.MasterSystems.FirstOrDefaultAsync(x => x.CatalogKey == spec.SystemKey && !x.Archived);
+        existing.SourceMasterSystemId = sourceMaster?.Id;
+        var targetMaster = spec.SystemKey == "gwdb" ? sourceMaster : await db.MasterSystems.FirstOrDefaultAsync(x => x.CatalogKey == "gwdb" && !x.Archived);
+        if (spec.SystemKey != "gwdb") existing.TargetMasterSystemId = targetMaster?.Id;
+        else existing.TargetMasterSystemId = null;
+        await db.SaveChangesAsync();
+        return existing;
+    }
+
+    static async Task UpsertGwdbEvidence(AppDbContext db)
+    {
+        var project = await db.Projects.FirstOrDefaultAsync(x => x.Name == ProjectName);
+        var gwdb = await db.Systems.FirstOrDefaultAsync(x => x.CatalogKey == "gwdb" && !x.Archived);
+        if (project is null || gwdb is null) return;
+        var rows = new (string Title, string Slug, string SourceType)[]
+        {
+            ("GWDB_CORE_SMD", "gwdb-core-smd", "Architecture diagram"),
+            ("GWDB_AUX_SMD", "gwdb-aux-smd", "Document"),
+            ("GWDB_DRILL_SMD", "gwdb-drill-smd", "Document"),
+            ("GWDB_NGIS_SMD", "gwdb-ngis-smd", "Document"),
+            ("GWDB_FUNDEF", "gwdb-fundef", "Document"),
+        };
+        foreach (var row in rows)
+        {
+            var existing = await db.Evidence.FirstOrDefaultAsync(x => x.ProjectId == project.Id && x.Title == row.Title);
+            if (existing is null)
+            {
+                existing = new Evidence { ProjectId = project.Id, Title = row.Title };
+                db.Evidence.Add(existing);
+            }
+            existing.SystemId = gwdb.Id;
+            existing.Url = $"https://department.sharepoint.com/sites/systemscope/evidence/{row.Slug}";
+            existing.Source = "GWDB schema and design artefacts";
+            existing.SourceType = row.SourceType;
+            existing.Classification = "OFFICIAL";
+            existing.Confidentiality = "Internal";
+            existing.Completeness = "Complete";
+            existing.Reliability = "Medium";
+            existing.Validated = false;
+            existing.ProcessingStatus = "Registered";
+        }
+        await db.SaveChangesAsync();
+        var count = await db.Evidence.CountAsync(x => x.ProjectId == project.Id && rows.Select(r => r.Title).Contains(x.Title));
+        if (count != 5)
+            throw new InvalidOperationException($"Phase 1 seed expected 5 GWDB SMD evidence titles, found {count}.");
+        foreach (var title in rows.Select(r => r.Title))
+        {
+            if (await db.Evidence.CountAsync(x => x.ProjectId == project.Id && x.Title == title) != 1)
+                throw new InvalidOperationException($"Phase 1 seed expected '{title}' once.");
+        }
+    }
+
+    public static async Task UpsertEndStateEvidenceLinks(AppDbContext db)
+    {
+        var project = await db.Projects.FirstOrDefaultAsync(x => x.Name == ProjectName);
+        if (project is null) return;
+        var gwdb = await db.Systems.FirstOrDefaultAsync(x => x.CatalogKey == "gwdb" && x.ProjectId == project.Id && !x.Archived);
+
+        async Task Link(string title, EvidenceEntityType type, Guid? targetId)
+        {
+            if (targetId is null) return;
+            var evidence = await db.Evidence.FirstOrDefaultAsync(x => x.ProjectId == project.Id && x.Title == title);
+            if (evidence is null) return;
+            var existing = await db.EvidenceLinks.FirstOrDefaultAsync(x => x.EvidenceId == evidence.Id && x.EntityType == type && x.EntityId == targetId.Value);
+            if (existing is null)
+            {
+                existing = new EvidenceLink { EvidenceId = evidence.Id, EntityType = type, EntityId = targetId.Value, ProjectId = project.Id };
+                db.EvidenceLinks.Add(existing);
+            }
+            existing.Archived = false;
+            existing.ProjectId = project.Id;
+        }
+
+        async Task<Guid?> Cap(string key) => (await db.BusinessCapabilities.FirstOrDefaultAsync(x => x.CatalogKey == key && !x.Archived))?.Id;
+        async Task<Guid?> Asset(string key) => (await db.InformationAssets.FirstOrDefaultAsync(x => x.CatalogKey == key && !x.Archived))?.Id;
+        async Task<Guid?> Integration(string name) => (await db.Integrations.FirstOrDefaultAsync(x => x.Name == name && !x.Archived))?.Id;
+        async Task<Guid?> Requirement(string title) => (await db.Requirements.FirstOrDefaultAsync(x => x.ProjectId == project.Id && x.Title == title && !x.Archived))?.Id;
+        async Task<Guid?> Finding(string title) => gwdb is null ? null : (await db.Findings.FirstOrDefaultAsync(x => x.SystemId == gwdb.Id && x.Title == title && !x.Archived))?.Id;
+
+        if (gwdb is not null)
+        {
+            await Link("GWDB_CORE_SMD", EvidenceEntityType.System, gwdb.Id);
+            await Link("GWDB_AUX_SMD", EvidenceEntityType.System, gwdb.Id);
+            await Link("GWDB_FUNDEF", EvidenceEntityType.System, gwdb.Id);
+        }
+        await Link("GWDB_CORE_SMD", EvidenceEntityType.Capability, await Cap("bore-registration"));
+        await Link("GWDB_CORE_SMD", EvidenceEntityType.Capability, await Cap("water-level-monitoring"));
+        await Link("GWDB_CORE_SMD", EvidenceEntityType.InformationAsset, await Asset("bore"));
+        await Link("GWDB_CORE_SMD", EvidenceEntityType.InformationAsset, await Asset("water-level"));
+        await Link("GWDB_AUX_SMD", EvidenceEntityType.Capability, await Cap("pump-testing"));
+        await Link("GWDB_AUX_SMD", EvidenceEntityType.InformationAsset, await Asset("aquifer"));
+        await Link("GWDB_DRILL_SMD", EvidenceEntityType.Capability, await Cap("geological-logging"));
+        await Link("GWDB_DRILL_SMD", EvidenceEntityType.InformationAsset, await Asset("bore"));
+        await Link("GWDB_DRILL_SMD", EvidenceEntityType.Integration, await Integration("GWDB drill log / plot tools"));
+        await Link("GWDB_NGIS_SMD", EvidenceEntityType.Capability, await Cap("water-level-monitoring"));
+        await Link("GWDB_NGIS_SMD", EvidenceEntityType.Capability, await Cap("water-quality-monitoring"));
+        await Link("GWDB_FUNDEF", EvidenceEntityType.Requirement, await Requirement("API-first architecture"));
+        await Link("GWDB_FUNDEF", EvidenceEntityType.Requirement, await Requirement("Modern web UI"));
+        await Link("GWDB_FUNDEF", EvidenceEntityType.Requirement, await Requirement("Digital workflows"));
+        await Link("GWDB_CORE_SMD", EvidenceEntityType.Finding, await Finding("Oracle Forms dependency"));
+        await Link("GWDB_CORE_SMD", EvidenceEntityType.Finding, await Finding("RN-centric architecture"));
+        await Link("GWDB_NGIS_SMD", EvidenceEntityType.Finding, await Finding("Multiple external integrations"));
+        await db.SaveChangesAsync();
+    }
+
+    static async Task AssertAquisCompletenessUnchanged(AppDbContext db)
+    {
+        var aquis = await db.Systems.FirstOrDefaultAsync(x => x.CatalogKey == "aquis" && !x.Archived);
+        if (aquis is null) return;
+        await ScanWorkspace.Recalculate(db, aquis.Id);
+        var scan = await db.ScanAssessments.Include(x => x.Domains).FirstAsync(x => x.AssessedSystemId == aquis.Id);
+        var facts = await db.ScanFacts.Where(x => x.AssessedSystemId == aquis.Id).ToListAsync();
+        var gaps = await db.InformationGaps.Where(x => x.AssessedSystemId == aquis.Id).ToListAsync();
+        var claims = await db.Claims.Where(x => x.AssessedSystemId == aquis.Id).ToListAsync();
+        var findings = await db.Findings.Where(x => x.SystemId == aquis.Id).ToListAsync();
+        var empty = ScanScoring.Score(scan.Domains, facts, gaps, claims, findings, extra: null);
+        if (scan.InformationCompleteness != empty.Information)
+            throw new InvalidOperationException($"AQUIS InformationCompleteness changed by coverage extras: stored {scan.InformationCompleteness}, empty-extra {empty.Information}.");
+    }
+
+    static async Task<BusinessCapability> UpsertCapability(AppDbContext db, string key, string name, Guid? parentId, CapabilityLevel level, string domain, string category, Criticality criticality, string owner, string description)
+    {
+        var existing = await db.BusinessCapabilities.FirstOrDefaultAsync(x => x.CatalogKey == key);
+        if (existing is null)
+        {
+            existing = new BusinessCapability { CatalogKey = key };
+            db.BusinessCapabilities.Add(existing);
+        }
+        existing.Archived = false;
+        existing.Name = name;
+        existing.ParentId = parentId;
+        existing.Level = level;
+        existing.Domain = domain;
+        existing.Category = category;
+        existing.Criticality = criticality;
+        existing.Owner = owner;
+        existing.Description = description;
+        await db.SaveChangesAsync();
+        return existing;
+    }
+
+    static async Task UpsertCoverage(AppDbContext db, Guid masterSystemId, Guid capabilityId)
+    {
+        var existing = await db.SystemCapabilities.FirstOrDefaultAsync(x => x.MasterSystemId == masterSystemId && x.CapabilityId == capabilityId);
+        if (existing is null)
+        {
+            existing = new SystemCapability { MasterSystemId = masterSystemId, CapabilityId = capabilityId };
+            db.SystemCapabilities.Add(existing);
+        }
+        existing.Archived = false;
+        existing.Role = CapabilityCoverageRole.Provides;
+        existing.State = InformationState.Current;
+        existing.Validation = ValidationStatus.AnalystReviewed;
+        existing.Notes = "";
+    }
+
+    static async Task<InformationAsset> UpsertAsset(AppDbContext db, (string Key, string Name, InformationAssetClassification Class, string Owner, string Steward, string Retention, string Regulatory, string Definition) spec)
+    {
+        var existing = await db.InformationAssets.FirstOrDefaultAsync(x => x.CatalogKey == spec.Key);
+        if (existing is null)
+        {
+            existing = new InformationAsset { CatalogKey = spec.Key };
+            db.InformationAssets.Add(existing);
+        }
+        existing.Archived = false;
+        existing.Name = spec.Name;
+        existing.Description = spec.Definition;
+        existing.BusinessDefinition = spec.Definition;
+        existing.DataOwner = spec.Owner;
+        existing.Steward = spec.Steward;
+        existing.Classification = spec.Class;
+        existing.RetentionPeriod = spec.Retention;
+        existing.RegulatoryRequirements = spec.Regulatory;
+        existing.Validation = ValidationStatus.AnalystReviewed;
+        await db.SaveChangesAsync();
+        return existing;
+    }
+
+    static async Task UpsertCapabilityAsset(AppDbContext db, Guid capabilityId, Guid assetId)
+    {
+        var existing = await db.CapabilityInformationAssets.FirstOrDefaultAsync(x => x.CapabilityId == capabilityId && x.InformationAssetId == assetId);
+        if (existing is null)
+        {
+            existing = new CapabilityInformationAsset { CapabilityId = capabilityId, InformationAssetId = assetId };
+            db.CapabilityInformationAssets.Add(existing);
+        }
+        existing.Archived = false;
+        existing.Notes = "";
+    }
+
+    static async Task UpsertAssetCoverage(AppDbContext db, Guid masterSystemId, Guid assetId)
+    {
+        var existing = await db.SystemInformationAssets.FirstOrDefaultAsync(x => x.MasterSystemId == masterSystemId && x.InformationAssetId == assetId && x.Role == InformationAssetRole.SystemOfRecord);
+        if (existing is null)
+        {
+            existing = new SystemInformationAsset { MasterSystemId = masterSystemId, InformationAssetId = assetId, Role = InformationAssetRole.SystemOfRecord };
+            db.SystemInformationAssets.Add(existing);
+        }
+        existing.Archived = false;
+        existing.Role = InformationAssetRole.SystemOfRecord;
+        existing.State = InformationState.Current;
+        existing.Validation = ValidationStatus.AnalystReviewed;
+        existing.Notes = "";
+    }
+
     static async Task RemoveIncomplete(AppDbContext db, Guid projectId)
     {
         await db.ValidationItems.Where(x => db.ValidationRequests.Any(r => r.ProjectId == projectId && r.Id == x.ValidationRequestId)).ExecuteDeleteAsync();
@@ -167,9 +511,15 @@ public static class MarketScanSeed
         await db.Integrations.Where(x => x.ProjectId == projectId).ExecuteDeleteAsync();
         await db.Findings.Where(x => x.ProjectId == projectId).ExecuteDeleteAsync();
         await db.Actions.Where(x => x.ProjectId == projectId).ExecuteDeleteAsync();
+        await db.EvidenceLinks.Where(x => db.Evidence.Any(e => e.ProjectId == projectId && e.Id == x.EvidenceId)).ExecuteDeleteAsync();
         await db.Evidence.Where(x => x.ProjectId == projectId).ExecuteDeleteAsync();
         await db.AuditEvents.Where(x => x.ProjectId == projectId).ExecuteDeleteAsync();
         var masterIds = await db.Systems.Where(x => x.ProjectId == projectId && x.MasterSystemId != null).Select(x => x.MasterSystemId!.Value).Distinct().ToListAsync();
+        if (masterIds.Count > 0)
+        {
+            await db.SystemCapabilities.Where(x => masterIds.Contains(x.MasterSystemId)).ExecuteDeleteAsync();
+            await db.SystemInformationAssets.Where(x => masterIds.Contains(x.MasterSystemId)).ExecuteDeleteAsync();
+        }
         await db.Systems.Where(x => x.ProjectId == projectId).ExecuteDeleteAsync();
         await db.MasterSystems.Where(m => masterIds.Contains(m.Id) && !m.ProjectSystems.Any()).ExecuteDeleteAsync();
         await db.Projects.Where(x => x.Id == projectId).ExecuteDeleteAsync();

@@ -224,8 +224,20 @@ function Overview({ data, gaps, onOpen, onEvidence }: { data: ScanWorkspace; gap
       tab: 'preview',
     },
   ];
+  const coverage = data.capabilities ?? [];
   return (
     <div className="scan-overview">
+      {!!coverage.length && (
+        <section className="panel" style={{ marginBottom: 18 }}>
+          <div className="panel-title"><div><h2>Business capabilities</h2></div></div>
+          {coverage.map(c => (
+            <div className="side-row" key={c.id}>
+              <span><b>{c.name}</b><small>{c.role}{c.maturityScore ? ` · maturity ${c.maturityScore}` : ''}</small></span>
+              <span className={pillClass(c.validation)}>{c.validation}</span>
+            </div>
+          ))}
+        </section>
+      )}
       <section className="market-outcomes" aria-labelledby="market-outcomes-title">
         <div className="market-outcomes-head">
           <div>
@@ -433,7 +445,7 @@ function DomainTab({ data, kind, variant, onBack, onEvidence, onOpenMap, onSaved
             </>
           )}
           {kind === 'Integrations' && tabVariant !== 'dataflows' && (
-            <RecordPanel title="Integration catalogue" action="＋ Add integration" extra={<button className="ghost compact" type="button" onClick={onOpenMap}>Open integration map</button>} rows={data.integrations as unknown as Record<string, unknown>[]} cols={[['sourceSystem', 'Source'], ['target', 'Destination'], ['businessPurpose', 'Purpose'], ['method', 'Method'], ['frequency', 'Frequency'], ['state', 'Status']]} statusKey="state" onAdd={() => setAdding('integration')} />
+            <RecordPanel title="Integration catalogue" action="＋ Add integration" extra={<button className="ghost compact" type="button" onClick={onOpenMap}>Open integration map</button>} rows={data.integrations as unknown as Record<string, unknown>[]} cols={[['sourceSystem', 'Source'], ['target', 'Destination'], ['businessPurpose', 'Purpose'], ['integrationType', 'Type'], ['protocol', 'Protocol'], ['dataFormat', 'Format'], ['method', 'Method (legacy)'], ['frequency', 'Frequency'], ['state', 'Status']]} statusKey="state" onAdd={() => setAdding('integration')} />
           )}
           {kind === 'Integrations' && tabVariant === 'dataflows' && (
             <>
@@ -443,6 +455,16 @@ function DomainTab({ data, kind, variant, onBack, onEvidence, onOpenMap, onSaved
           )}
           {kind === 'DataQuality' && (
             <>
+              <section className="panel">
+                <div className="panel-title"><div><h2>Information assets</h2><p>Business data objects independent of tables. Quality ratings stay on data domains below.</p></div></div>
+                {!(data.informationAssets ?? []).length && <p className="pad">No information assets are linked to this system.</p>}
+                {(data.informationAssets ?? []).map(a => (
+                  <div className="side-row" key={a.id}>
+                    <span><b>{a.name}</b><small>{a.classification} · {a.role}</small></span>
+                    <span className={pillClass(a.validation)}>{a.validation}</span>
+                  </div>
+                ))}
+              </section>
               <RecordPanel title="Data models, schemas and relationships" action="＋ Add data domain" extra={<button className="ghost compact" type="button" onClick={onOpenMap}>Open ER diagram</button>} rows={data.dataDomains} cols={[['name', 'Entity / schema'], ['principalEntities', 'Related entities'], ['authoritativeSystem', 'Authoritative'], ['dataOwner', 'Owner']]} statusKey="completeness" onAdd={() => setAdding('datadomain')} />
               <RecordPanel title="Data domain register" action="＋ Add data domain" extra={<button className="ghost compact" type="button" onClick={() => setAdding('datadomain')}>Import inventory</button>} rows={data.dataDomains} cols={[['name', 'Data domain'], ['businessDescription', 'Description'], ['authoritativeSystem', 'Authoritative'], ['dataOwner', 'Owner'], ['approximateVolume', 'Volume']]} statusKey="completeness" onAdd={() => setAdding('datadomain')} />
               <RecordPanel title="Data quality assessment" action="＋ Assess data quality" rows={data.dataDomains} cols={[['name', 'Data domain'], ['completeness', 'Completeness'], ['accuracy', 'Accuracy'], ['consistency', 'Consistency'], ['timeliness', 'Timeliness']]} statusKey="completeness" onAdd={() => setAdding('datadomain')} />

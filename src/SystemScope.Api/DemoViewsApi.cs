@@ -91,6 +91,41 @@ public static class DemoViewsApi
             if (!priority.Any())
                 priority = mustGaps.Take(5).Select(g => new { g.Id, g.MissingInformation, domain = g.Domain.ToString(), status = g.Status.ToString() });
 
+            var masterId = system.MasterSystemId;
+            var capabilities = await (
+                from link in db.SystemCapabilities
+                join cap in db.BusinessCapabilities on link.CapabilityId equals cap.Id
+                where masterId != null && link.MasterSystemId == masterId && !link.Archived && !cap.Archived
+                orderby cap.Level, cap.Name
+                select new
+                {
+                    link.Id,
+                    capabilityId = cap.Id,
+                    cap.CatalogKey,
+                    cap.Name,
+                    level = cap.Level.ToString(),
+                    cap.Domain,
+                    role = link.Role.ToString(),
+                    link.MaturityScore,
+                    state = link.State.ToString(),
+                    validation = link.Validation.ToString(),
+                }).ToListAsync();
+            var informationAssets = await (
+                from link in db.SystemInformationAssets
+                join asset in db.InformationAssets on link.InformationAssetId equals asset.Id
+                where masterId != null && link.MasterSystemId == masterId && !link.Archived && !asset.Archived
+                orderby asset.Name
+                select new
+                {
+                    link.Id,
+                    informationAssetId = asset.Id,
+                    asset.CatalogKey,
+                    asset.Name,
+                    classification = asset.Classification.ToString(),
+                    role = link.Role.ToString(),
+                    state = link.State.ToString(),
+                    validation = link.Validation.ToString(),
+                }).ToListAsync();
             return Results.Ok(new
             {
                 workspace = payload,
@@ -145,8 +180,19 @@ public static class DemoViewsApi
                         sources = f.EvidenceId is null ? 0 : 2,
                         status = f.ReviewState == ReviewState.Approved ? "Confirmed" : f.Type == FindingType.InformationGap ? "Open" : f.Validation.ToString(),
                     }),
-                    evidence = evidence.Take(8).Select(e => new { e.Id, e.Title, e.SourceType, e.Completeness, e.UpdatedAt }),
+                    evidence = evidence.Take(8).Select(e => new
+                    {
+                        e.Id,
+                        e.Title,
+                        e.SourceType,
+                        e.Completeness,
+                        e.UpdatedAt,
+                        e.Url,
+                        links = db.EvidenceLinks.Where(l => l.EvidenceId == e.Id && !l.Archived).Select(l => new { entityType = l.EntityType.ToString(), l.EntityId }).ToList(),
+                    }),
                     activity = audit.Select(a => new { a.Timestamp, a.ActorName, a.Action, a.EntityType, a.Detail }),
+                    capabilities,
+                    informationAssets,
                 },
             });
         });

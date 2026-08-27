@@ -3,10 +3,10 @@ import { api } from '../landscape/api';
 import type { ScanWorkspace } from './types';
 
 const STEPS = [
-  { n: 1, title: 'Upload and malware scan', detail: 'Checking file format and scanning for threats.' },
-  { n: 2, title: 'Extract text and structure', detail: 'Converting content to structured data.' },
-  { n: 3, title: 'Detect sensitive information', detail: 'Identifying personal and sensitive data.' },
-  { n: 4, title: 'Generate proposed claims', detail: 'AI extracts findings and potential claims.' },
+  { n: 1, title: 'Register HTTPS source', detail: 'Store an approved-host link. Files are not uploaded.' },
+  { n: 2, title: 'Capture source details', detail: 'Title, type, completeness and participants.' },
+  { n: 3, title: 'Link related records', detail: 'Optionally attach the source to capabilities, assets or integrations.' },
+  { n: 4, title: 'Generate proposed claims', detail: 'AI extracts findings as claims, not facts.' },
   { n: 5, title: 'Analyst review', detail: 'Review, edit and confirm before use.' },
 ];
 
@@ -19,7 +19,6 @@ export function AddEvidence({
   onCancel: () => void;
   onSaved: (message: string) => void;
 }) {
-  const [fileName, setFileName] = useState('AQUIS walkthrough transcript.docx');
   const [busy, setBusy] = useState(false);
   const [title, setTitle] = useState('AQUIS walkthrough with Anthony McLoughlin');
   const [sourceType, setSourceType] = useState('Meeting transcript');
@@ -35,16 +34,37 @@ export function AddEvidence({
   const [extractGaps, setExtractGaps] = useState(true);
   const [extractClaims, setExtractClaims] = useState(true);
   const [autoValidate, setAutoValidate] = useState(false);
+  const [url, setUrl] = useState(`https://department.sharepoint.com/sites/systemscope/evidence/${data.system.catalogKey || 'source'}`);
+  const [links, setLinks] = useState<{ entityType: string; entityId: string; label: string }[]>([]);
+  const [linkType, setLinkType] = useState('Capability');
+  const [linkTarget, setLinkTarget] = useState('');
+  const [linkOptions, setLinkOptions] = useState<{ id: string; name: string }[]>([]);
+
+  const loadTargets = async (type: string) => {
+    setLinkType(type);
+    setLinkTarget('');
+    if (type === 'Capability') {
+      const rows = await api<{ id: string; name: string }[]>('/capabilities');
+      setLinkOptions(rows.map(r => ({ id: r.id, name: r.name })));
+    } else if (type === 'InformationAsset') {
+      const rows = await api<{ id: string; name: string }[]>('/information-assets');
+      setLinkOptions(rows.map(r => ({ id: r.id, name: r.name })));
+    } else if (type === 'Integration') {
+      const rows = await api<{ id: string; name: string }[]>(`/scan/integrations?projectId=${data.system.projectId}`);
+      setLinkOptions(rows.map(r => ({ id: r.id, name: r.name })));
+    } else {
+      setLinkOptions([{ id: data.system.id, name: data.system.name }]);
+    }
+  };
 
   const submit = async (analyse: boolean) => {
     setBusy(true);
     try {
-      const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
       await api(`/systems/${data.system.id}/evidence/analyse`, {
         method: 'POST',
         body: JSON.stringify({
           title,
-          url: `https://department.sharepoint.com/sites/systemscope/evidence/${slug || 'source'}`,
+          url,
           source: owner,
           sourceType,
           completeness,
@@ -59,9 +79,10 @@ export function AddEvidence({
           extractGaps: analyse && extractGaps,
           extractClaims: analyse && extractClaims,
           autoValidate: analyse && autoValidate,
+          links: links.map(l => ({ entityType: l.entityType, entityId: l.entityId })),
         }),
       });
-      onSaved(analyse ? 'Source uploaded. Proposed claims are waiting for analyst review and are not facts yet.' : 'Source saved without analysis.');
+      onSaved(analyse ? 'Source registered. Proposed claims are waiting for analyst review and are not facts yet.' : 'Source saved without analysis.');
     } catch (e) {
       onSaved(e instanceof Error ? e.message : 'Unable to save evidence');
     } finally {
@@ -75,33 +96,55 @@ export function AddEvidence({
         <div>
           <small>{data.system.name.toUpperCase()} · EVIDENCE</small>
           <h1>Add evidence</h1>
-          <p>Upload a discovery source and extract proposed system findings for analyst review.</p>
+          <p>Register an HTTPS discovery source and extract proposed system findings for analyst review. Files are not uploaded.</p>
           <p className="crumb"><button className="linkish" onClick={onCancel}>Assessments</button> / {data.system.name} / Evidence / Add</p>
         </div>
         <div className="scan-head-actions">
           <button className="ghost" onClick={onCancel}>Cancel</button>
-          <button className="primary" disabled={busy} onClick={() => submit(true)}>Upload & analyse</button>
+          <button className="primary" disabled={busy} onClick={() => submit(true)}>Register source & analyse</button>
         </div>
       </header>
       <div className="scan-split">
         <form className="domain-main" onSubmit={(e: FormEvent) => { e.preventDefault(); submit(true); }}>
           <section className="panel pad-form">
-            <h3>1. Upload source</h3>
-            <label className="dropzone">
-              <input type="file" hidden onChange={e => setFileName(e.target.files?.[0]?.name || fileName)} />
-              <div className="drop-icon">↑</div>
-              <b>Drop files here or browse</b>
-              <small>PDF, Word, Excel, PowerPoint, text, images, audio or video · Maximum 500 MB</small>
+            <h3>1. HTTPS source</h3>
+            <label>Approved repository URL
+              <input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://department.sharepoint.com/sites/systemscope/evidence/…" required />
             </label>
-            {fileName && (
-              <div className="file-row">
-                <span>W</span>
-                <b>{fileName}</b>
-                <em>2.4 MB</em>
-                <span className="pill">Ready</span>
-                <button type="button" className="icon-btn" onClick={() => setFileName('')}>×</button>
+            <small className="hint">Evidence must be an HTTPS link on an approved host. Attachments are not accepted.</small>
+          </section>
+          <section className="panel pad-form">
+            <h3>Also link to</h3>
+            <p className="hint">The same source can support capabilities, information assets, integrations or this system.</p>
+            {links.map(l => (
+              <div className="file-row" key={`${l.entityType}-${l.entityId}`}>
+                <b>{l.entityType}</b>
+                <span>{l.label}</span>
+                <button type="button" className="icon-btn" onClick={() => setLinks(current => current.filter(x => x !== l))}>×</button>
               </div>
-            )}
+            ))}
+            <div className="grid2">
+              <label>Record type
+                <select value={linkType} onChange={e => { void loadTargets(e.target.value); }}>
+                  <option>Capability</option>
+                  <option value="InformationAsset">Information asset</option>
+                  <option>Integration</option>
+                  <option>System</option>
+                </select>
+              </label>
+              <label>Record
+                <select value={linkTarget} onChange={e => setLinkTarget(e.target.value)} onFocus={() => { if (!linkOptions.length) void loadTargets(linkType); }}>
+                  <option value="">Select…</option>
+                  {linkOptions.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+                </select>
+              </label>
+            </div>
+            <button type="button" className="ghost compact" onClick={() => {
+              const option = linkOptions.find(o => o.id === linkTarget);
+              if (!option) return;
+              setLinks(current => current.some(x => x.entityType === linkType && x.entityId === option.id) ? current : [...current, { entityType: linkType, entityId: option.id, label: option.name }]);
+              setLinkTarget('');
+            }}>Add link</button>
           </section>
           <section className="panel pad-form">
             <h3>2. Source details</h3>
@@ -164,7 +207,7 @@ export function AddEvidence({
           </section>
           <div className="domain-foot-actions evidence-foot">
             <button type="button" className="ghost" disabled={busy} onClick={() => submit(false)}>Save source only</button>
-            <button className="primary" disabled={busy} type="submit">Upload & analyse</button>
+            <button className="primary" disabled={busy} type="submit">Register source & analyse</button>
           </div>
         </form>
         <aside className="scan-side">

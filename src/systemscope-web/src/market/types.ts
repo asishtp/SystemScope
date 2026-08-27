@@ -125,6 +125,10 @@ export type ScanWorkspace = {
     sourceSystem: string;
     target: string;
     method: string;
+    integrationType?: string;
+    protocol?: string;
+    dataFormat?: string;
+    catalogId?: string | null;
     state: string;
     validation: string;
     businessPurpose: string;
@@ -140,6 +144,29 @@ export type ScanWorkspace = {
   }[];
   security: Record<string, unknown>[];
   documents: { id: string; title: string; audience: string; status: string; createdAt: string; fileName: string; warnings: string }[];
+  capabilities?: {
+    id: string;
+    capabilityId: string;
+    catalogKey: string;
+    name: string;
+    level: string;
+    domain?: string;
+    category?: string;
+    role: string;
+    maturityScore?: number | null;
+    state: string;
+    validation: string;
+  }[];
+  informationAssets?: {
+    id: string;
+    informationAssetId: string;
+    catalogKey: string;
+    name: string;
+    classification: string;
+    role: string;
+    state: string;
+    validation: string;
+  }[];
   requiredAttributes: Record<string, string[]>;
 };
 

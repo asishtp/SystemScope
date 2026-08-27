@@ -86,7 +86,8 @@ public static class ScanApi
             m.Acronym = (i.Acronym ?? "").Trim();
             m.Description = (i.Description ?? "").Trim();
             m.BusinessPurpose = (i.BusinessPurpose ?? "").Trim();
-            m.BusinessCapabilities = (i.BusinessCapabilities ?? "").Trim();
+            if (!await db.SystemCapabilities.AnyAsync(x => x.MasterSystemId == m.Id && !x.Archived))
+                m.BusinessCapabilities = (i.BusinessCapabilities ?? "").Trim();
             m.BusinessOwner = (i.BusinessOwner ?? "").Trim();
             m.TechnicalOwner = (i.TechnicalOwner ?? "").Trim();
             m.SupportTeam = (i.SupportTeam ?? "").Trim();
@@ -353,6 +354,12 @@ public static class ScanApi
             db.Claims.AddRange(claims);
             await audit.Record(db, u, i.ExtractClaims ? "Extract" : "Create", "Evidence", evidence.Id, evidence.Title, system.ProjectId);
             await db.SaveChangesAsync();
+            if (i.Links is { Count: > 0 })
+            {
+                foreach (var link in i.Links)
+                    await CatalogApi.TryAddEvidenceLink(db, evidence, link, audit, u);
+                await db.SaveChangesAsync();
+            }
             await ScanWorkspace.Recalculate(db, id);
             return Results.Created($"/api/evidence/{evidence.Id}", new { evidence.Id, claims = claims.Count, note = "Proposed claims require analyst review and are not approved facts." });
         });
@@ -454,6 +461,10 @@ public static class ScanApi
                 x.InformationExchanged,
                 state = x.State.ToString(),
                 x.Method,
+                integrationType = x.IntegrationType,
+                x.Protocol,
+                x.DataFormat,
+                x.CatalogId,
                 x.Technology,
                 x.Frequency,
                 x.Owner,
@@ -467,6 +478,12 @@ public static class ScanApi
         {
             var item = await db.Integrations.FindAsync(id);
             if (item is null) return Results.NotFound();
+            if (i.CatalogId is Guid catalogId)
+            {
+                var catalog = await db.IntegrationCatalogs.FirstOrDefaultAsync(x => x.Id == catalogId && !x.Archived);
+                if (catalog is null) return Results.NotFound();
+                IntegrationTypes.CopyFromCatalog(item, catalog);
+            }
             ApplyIntegration(item, i);
             await audit.Record(db, u, "Update", "Integration", item.Id, item.Name, item.ProjectId);
             await db.SaveChangesAsync();
@@ -922,6 +939,8 @@ public static class ScanApi
         item.Frequency = i.Frequency; item.Trigger = i.Trigger; item.Volume = i.Volume; item.Authentication = i.Authentication; item.Encryption = i.Encryption;
         item.Transformation = i.Transformation; item.ErrorHandling = i.ErrorHandling; item.RetryMechanism = i.RetryMechanism; item.Owner = i.Owner; item.Monitoring = i.Monitoring;
         item.Criticality = i.Criticality; item.ReplacementImpact = i.ReplacementImpact; item.EvidenceId = i.EvidenceId; item.Validation = i.Validation;
+        IntegrationTypes.ApplyMapped(item, i.Method, i.IntegrationType, i.Protocol, i.DataFormat);
+        if (i.CatalogId is Guid cid) item.CatalogId = cid;
     }
 }
 
@@ -939,6 +958,6 @@ public record BatchInput(string Name, string Purpose, string Schedule, string Ti
 public record DataDomainInput(string Name, string BusinessDescription, string AuthoritativeSystem, string PrincipalEntities, string ApproximateVolume, string HistoricalDepth, string Classification, string RetentionRequirement, string DataOwner, string DownstreamConsumers, string MigrationRequirement, QualityRating Completeness, QualityRating Accuracy, QualityRating Consistency, QualityRating Validity, QualityRating Timeliness, QualityRating Uniqueness, QualityRating ReferentialIntegrity, string KnownDuplicates, string MissingMandatoryValues, string InvalidCodes, string OrphanedRecords, string ManualCorrectionProcess, string ReconciliationProcess, string QualityOwner, ValidationStatus Validation);
 public record SecurityInput(string Name, string Area, string Description, string Status, VisibilityClass Visibility, Guid? EvidenceId, ValidationStatus Validation);
 public record GapInput(ScanDomainKind Domain, string MissingInformation, string? ReasonRequired, Priority Priority, string? MarketScanImpact, string? AssignedOwner, DateOnly? DueDate, GapStatus Status, string? Resolution, Guid? EvidenceId);
-public record IntegrationScanInput(string Name, string SourceSystem, string Target, string BusinessPurpose, string Direction, string InformationExchanged, InformationState State, string InterfaceType, string Method, string Technology, string Frequency, string Trigger, string Volume, string Authentication, string Encryption, string Transformation, string ErrorHandling, string RetryMechanism, string Owner, string Monitoring, string Criticality, string ReplacementImpact, Guid? EvidenceId, ValidationStatus Validation);
+public record IntegrationScanInput(string Name, string SourceSystem, string Target, string BusinessPurpose, string Direction, string InformationExchanged, InformationState State, string InterfaceType, string Method, string Technology, string Frequency, string Trigger, string Volume, string Authentication, string Encryption, string Transformation, string ErrorHandling, string RetryMechanism, string Owner, string Monitoring, string Criticality, string ReplacementImpact, Guid? EvidenceId, ValidationStatus Validation, IntegrationType? IntegrationType = null, string? Protocol = null, string? DataFormat = null, Guid? CatalogId = null);
 public record DocumentInput(Guid ProjectId, List<Guid> SystemIds, string? Audience, string? StateScope, bool IncludeDiagrams, bool IncludeFindings, bool IncludeGaps, bool IncludeSecurityAppendix, string? Format=null, bool IncludeRequirements=true, Guid? DesignTemplateId=null);
-public record AnalyseInput(string Title, string Url, string? Source, string? SourceType, string? Completeness, string? Reliability, string? Confidentiality, string? Participants, string? Description, string? EvidenceDate, bool ExtractTechnologies, bool ExtractIntegrations, bool ExtractFindings, bool ExtractGaps, bool ExtractClaims, bool AutoValidate);
+public record AnalyseInput(string Title, string Url, string? Source, string? SourceType, string? Completeness, string? Reliability, string? Confidentiality, string? Participants, string? Description, string? EvidenceDate, bool ExtractTechnologies, bool ExtractIntegrations, bool ExtractFindings, bool ExtractGaps, bool ExtractClaims, bool AutoValidate, List<EvidenceLinkInput>? Links = null);
