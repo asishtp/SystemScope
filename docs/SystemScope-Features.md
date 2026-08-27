@@ -306,16 +306,22 @@ Tabs:
 
 | Tab | Content |
 | --- | --- |
-| Overview | Purpose, owners, classification, lifecycle, completeness KPIs, priority gaps |
+| Overview | Purpose, owners, classification, lifecycle, completeness KPIs, priority gaps, capability chips when coverage exists |
+| Capabilities | Structured business capabilities linked to the master system (name, level, role, validation) |
 | Technology | Front end, database, architecture style, application server, reporting — each with validation status |
 | Integrations | Recorded relationships (confirmed, inferred, proposed, unconfirmed) |
-| Data | Data-related facts and gaps |
-| Evidence | Linked sources |
+| Data | Information assets (business data objects) above data-quality domains |
+| Evidence | HTTPS sources and how many catalogue records they also link to |
 | Findings | Observations, risks and gaps for this system |
 | Documents | Published documents shown on the profile |
 | History | Recent audit activity |
 
 Actions from the profile: open assessment, add evidence, open documents, open a published record, navigate to a related system.
+
+Enterprise catalogues (sidebar **CATALOGUE**):
+
+- `#/capabilities` — L1–L3 business capability register. GWDB is seeded with Groundwater operations and five L2 capabilities (Bore Registration, Water Level Monitoring, Water Quality Monitoring, Pump Testing, Geological Logging).
+- `#/information-assets` — business data assets independent of database tables. GWDB is system of record for Bore, Aquifer, Water Level and Water Quality Result. Classification is Public / Internal / Sensitive / Restricted and does not overwrite system `OFFICIAL`.
 
 ---
 
@@ -427,7 +433,7 @@ The UI shows **Ready** at 80%+, otherwise **Not ready**. Blocking issues on docu
 
 ![Add evidence and AI analysis](Add%20Evidence%20&%20AI%20Analysis.png)
 
-Capture a discovery source without treating the upload as a published fact.
+Register an HTTPS discovery source on an approved host. Files are not uploaded. Proposed claims still require analyst review.
 
 Source metadata:
 
@@ -517,12 +523,14 @@ Each record can hold:
 - source system and target
 - business purpose
 - direction and information exchanged
-- method and technology
+- type (API, Batch, File Transfer, Database Link, Event Driven, Manual), protocol and data format
+- method (legacy) and technology
 - frequency
 - owner and monitoring
 - criticality
 - state: current, future, suspected or retired
 - validation status
+- optional reusable catalog row (copy-on-instantiate; later catalog edits do not sync)
 
 Retired records can be archived rather than deleted. The dashboard relationship map and generated documents reuse this catalogue. Unknown processing is treated as an information gap, not a negative finding.
 
@@ -715,7 +723,7 @@ Seven in-scope systems:
 | Key | System | Notes |
 | --- | --- | --- |
 | `aquis` | AQUIS | Legacy Oracle Forms; unconfirmed Groundwater relationship |
-| `gwdb` | Groundwater (GWDB) | Oracle Forms, GWPlot, drill logs |
+| `gwdb` | Groundwater (GWDB) | Oracle Forms, GWPlot, drill logs; structured capabilities, information assets, integration types, five SMD evidence sources |
 | `hydstra` | Water Monitoring Information System — Hydstra | Time-series, Hydrotel |
 | `wfieldapp` | Water Monitoring Field Application | Mobile field capture |
 | `wasp` | Water Analysis Sample Program | Power BI, Hydstra, DES storage |
@@ -731,6 +739,9 @@ Personas in the seeded flow:
 Notable demo routes:
 
 - `#/assessments/aquis`
+- `#/systems/gwdb`
+- `#/capabilities`
+- `#/information-assets`
 - `#/documents/aquis`
 - `#/validate/aquis/request-1042`
 - `#/documents/published/DOC-AQUIS-0001`
@@ -749,6 +760,8 @@ AQUIS also appears on the landscape map as a water-monitoring system.
 | Projects | `#/projects` |
 | Systems register | `#/systems` |
 | System profile | `#/systems/{key}` |
+| Capabilities catalogue | `#/capabilities` and `#/capabilities/{id}` |
+| Information assets | `#/information-assets` and `#/information-assets/{id}` |
 | Assessments list | `#/assessments` |
 | Assessment overview | `#/assessments/{key}` |
 | Architecture | `#/assessments/{key}/architecture` |
@@ -889,7 +902,12 @@ Unknowns stay visible throughout: they appear as gaps, labelled inferences in do
 | File | Role |
 | --- | --- |
 | `features.md` | Implementation inventory against the original requirements baseline |
+| `SYSTEMSCOPE_PRODUCT_ROADMAP.md` | Phased product roadmap with current Phase 1 status |
+| `SystemScope-Phase1-Design.md` | Phase 1 design and PR plan (PRs 1–4 done; 5–6 remaining) |
+| `SystemScope_Enterprise_PRD.md` | Field-level SystemScope 2.0 PRD |
 | `SystemScope_Market_Scan_Requirements.md` | Market-scan, assessment and document-generation requirements |
 | Screen mockup PNGs | Visual reference for the implemented workspaces |
+
+**Phase 1 remaining in this repository:** assessment template v2 (PR 5); GWDB findings, requirements, search hits, and document/CSV lists (PR 6). Optional action FKs are PR 7.
 
 A shorter inventory of remaining polish (pixel-level mockup match, native PDF rendition, live document-body comparison, and production acceptance items) is in `features.md`. This document covers **what is already built**.
