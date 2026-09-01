@@ -1,6 +1,7 @@
 .learn-shell{position:fixed;inset:0;z-index:40;display:grid;grid-template-rows:64px 1fr;background:#fff;color:#102a43;font-family:Segoe UI,Arial,sans-serif;overflow:hidden}
 .learn-shell .learn-topbar{display:grid;grid-template-columns:minmax(0,1fr) 438px;align-items:center;justify-content:stretch;gap:24px;height:64px;min-height:64px;margin:0;padding:0 22px 0 10px;background:linear-gradient(105deg,#001b45,#00102e);color:white;box-sizing:border-box}
-.learn-topbar-left,.learn-topbar-right{display:flex;align-items:center;gap:10px;min-width:0}
+.learn-topbar-left{display:grid;grid-template-columns:200px minmax(0,1fr);align-items:center;gap:10px;min-width:0}
+.learn-topbar-right{display:flex;align-items:center;gap:10px;min-width:0}
 .learn-topbar-right{justify-content:flex-end}
 .learn-topbar-title{display:none}
 .learn-shell .learn-menu{border:0;background:transparent;color:white;width:36px;height:36px;min-height:0;border-radius:8px;display:grid;place-items:center;padding:0;flex:0 0 auto}
@@ -24,7 +25,7 @@
 .learn-sidenav button svg{flex:0 0 auto}
 .learn-sidenav button:hover{background:#163a73;color:white}
 .learn-sidenav button.active{background:#0866f5;color:white}
-.learn-shell .learn-main{grid-column:auto;min-width:0;min-height:0;overflow:auto;padding:22px 18px 40px 32px;max-width:none;width:100%;margin:0;box-sizing:border-box}
+.learn-shell .learn-main{grid-column:auto;min-width:0;min-height:0;overflow:auto;padding:22px 18px 40px 32px;max-width:1336px;width:100%;margin:0;box-sizing:border-box}
 .learn-shell .learn-hero h2{font-size:28px;line-height:1.2;margin:0 0 8px;color:#0b2d5c;font-weight:700}
 .learn-shell .learn-hero p{margin:0 0 20px;color:#5b6b82;font-size:14px;max-width:620px;line-height:1.5}
 .learn-grid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(260px,320px);gap:16px;align-items:start}
@@ -88,7 +89,7 @@
 .learn-legend .doc{background:#e8f6ea;color:#166534}
 .learn-legend .inf{background:#fff4e5;color:#9a3412}
 .learn-legend .sch{background:#e8f1ff;color:#1d4ed8}
-.learn-reader{display:grid;grid-template-columns:minmax(902px,1fr) 333px;gap:47px;align-items:start;padding-bottom:88px}
+.learn-reader{display:grid;grid-template-columns:902px 333px;gap:47px;align-items:start;padding-bottom:88px}
 .learn-reader-main{min-width:0}
 .learn-side-card{background:white;border:1px solid #e4eaf3;border-radius:9px;padding:16px;margin-bottom:14px}
 .learn-kicker-blue{color:#075dff;font-size:14px;font-weight:700;letter-spacing:0;margin:0 0 6px}
@@ -163,6 +164,23 @@
 .learn-empty{padding:40px;text-align:center;color:#64748b}
 .learn-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
 .learn-pill{display:inline-flex;align-items:center;border-radius:999px;padding:4px 8px;font-size:11px;font-weight:700}
+.lesson-2 .learn-head-meta{display:grid;grid-template-columns:1fr;gap:10px;border-bottom:1px solid #d8dee8;padding-bottom:14px}
+.lesson-2 .learn-lesson-title{font-size:44px}
+.learn-shell:has(.lesson-2) .learn-body{grid-template-columns:220px minmax(0,1fr)}
+.learn-shell:has(.lesson-2) .learn-topbar-left{grid-template-columns:220px minmax(0,1fr)}
+.learn-shell .learn-main:has(.lesson-2){padding-left:31px;max-width:none}
+.lesson-2{grid-template-columns:minmax(912px,1fr) 323px;gap:32px}
+.lesson-2 .learn-head-meta .learn-progress-line{display:flex;flex-direction:row-reverse;justify-content:flex-end;max-width:680px;width:680px;gap:10px;color:#075dff}
+.lesson-2 .learn-head-meta .learn-progress-line .learn-bar{width:578px}
+.lesson-2 .lv-section{border:0;border-bottom:1px solid #d8dee8;border-radius:0;padding:0 0 14px;margin-bottom:14px}
+.lesson-2 .lv-section>h3{font-size:20px;margin-bottom:12px}
+.lesson-2 .lv-section .lv-n{display:inline-block;width:auto;height:auto;background:transparent;color:#101b36;font-size:20px;border-radius:0;line-height:1;white-space:nowrap}
+.lesson-2 .lv-section .lv-n::after{content:"."}
+.lesson-2 .learn-toc .n{width:24px;height:24px;border-radius:50%;background:#0a4fac!important;color:#fff!important;font-size:13px}
+.lesson-2 .learn-toc .n::before,.lesson-2 .learn-toc .n::after{display:none}
+.lesson-2 .learn-toc button:first-child{background:#dfebfa;border-radius:4px;padding:7px 9px}
+.lesson-2 .learn-takeaways li::before{background:#f2fbf3;color:#16832b;border:1px solid #16832b}
+.learn-reader.lesson-2~.learn-footer{left:0;right:0;width:auto;padding-left:242px;padding-right:226px}
 @media(max-width:1100px){
   .learn-grid,.learn-hero-cards,.learn-lessons,.learn-reader,.learn-body{grid-template-columns:1fr}
   .learn-sidenav{display:none}

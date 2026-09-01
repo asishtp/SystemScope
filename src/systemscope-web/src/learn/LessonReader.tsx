@@ -55,7 +55,7 @@ export function LessonReader({
 
   return (
     <>
-      <div className="learn-reader">
+      <div className={`learn-reader lesson-${screen.number}`}>
         <article className="learn-reader-main">
           <p className="learn-kicker-blue">LESSON {screen.number} OF {total}</p>
           <h2 className="learn-lesson-title">{screen.title}</h2>

@@ -17,6 +17,15 @@
 .lv-key.green{background:#f3fbf6;border-color:#b7e4c7}
 .lv-key.blue{background:#f4f8ff;border-color:#c7dbff}
 .lv-key b{display:block;margin-bottom:4px}
+.lesson-2 .lv-key{position:relative;padding:12px 14px 10px 86px;height:112px;min-height:112px;display:flex;flex-direction:column;justify-content:center;border:1px solid #bac8d6;border-radius:8px;background:#fff;box-sizing:border-box}
+.lesson-2 .lv-key::before{content:"";position:absolute;left:0;top:0;bottom:0;width:72px;background:#eef9ef}
+.lesson-2 .lv-key.blue::before{background:#eef4ff;color:#075dff}
+.lesson-2 .lv-key.green b{font-size:18px;color:#16832b}
+.lesson-2 .lv-key.blue b{font-size:18px;color:#075dff}
+.lesson-2 .lv-key p{margin:3px 0 7px;color:#1c2433;font-size:14px}
+.lesson-2 .lv-key small{display:block;border-top:1px solid #d4d9e0;padding-top:7px;color:#111;font-size:13px}
+.lv-key-icon{position:absolute;left:13px;top:50%;transform:translateY(-50%);width:47px;height:47px;fill:none;stroke:#16832b;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;z-index:1}
+.lv-key.blue .lv-key-icon{stroke:#075dff}
 .lv-caption{text-align:center;color:#64748b;font-style:italic;margin:10px 0 0}
 .lv-callout{background:#eef4ff;border:1px solid #c7dbff;border-radius:12px;padding:12px 14px;color:#1d4ed8;font-weight:700;margin-top:10px}
 .lv-flow3{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;gap:8px;align-items:stretch}
@@ -40,12 +49,42 @@
 .lv-process figcaption span{display:inline-block;border:1px solid #d7e3f3;border-radius:8px;padding:4px 8px;font-size:12px}
 .lv-journey small{display:block;border:0;padding:0;color:#08235e;font-size:13px;white-space:nowrap}
 .lv-annotated{position:relative;padding:28px 120px 36px 0}
+.lv-table-name{border:1px solid #075dff;border-bottom:0;background:#deebff;color:#111;text-align:center;font-weight:700;padding:5px 8px;border-radius:4px 4px 0 0}
+.lv-annotated .lv-table{border-radius:0 0 5px 5px;border-color:#7f8ea3}
+.lv-annotated .lv-table th,.lv-annotated .lv-table td{text-align:center;border-right:1px solid #aab4c2;padding:7px 9px}
+.lv-annotated .lv-table th{background:#f7f9fc;color:#111}
+.lesson-2 .lv-annotated .lv-table th{white-space:nowrap}
+.lesson-2 .lv-annotated .lv-table th:nth-child(1),.lesson-2 .lv-annotated .lv-table td:nth-child(1){width:29.5%}
+.lesson-2 .lv-annotated .lv-table th:nth-child(2),.lesson-2 .lv-annotated .lv-table td:nth-child(2){width:17.8%}
+.lesson-2 .lv-annotated .lv-table th:nth-child(3),.lesson-2 .lv-annotated .lv-table td:nth-child(3){width:22.9%}
+.lesson-2 .lv-annotated .lv-table th:nth-child(4),.lesson-2 .lv-annotated .lv-table td:nth-child(4){width:29.8%}
+.lesson-2 .lv-tag.field{top:61px;right:0}
+.lesson-2 .lv-tag.top{left:27.4%}
+.lesson-2 .lv-tag.field{left:670px;right:auto}
+.lesson-2 .lv-tag.row{left:670px;right:auto;top:121px;bottom:auto;max-width:190px;white-space:normal}
+.lesson-2 .lv-tag.field::before{content:"";position:absolute;right:100%;top:50%;width:78px;border-top:2px solid #16832b}
+.lesson-2 .lv-tag.row::before{content:"";position:absolute;right:100%;top:50%;width:45px;border-top:2px solid #075dff}
+.lesson-2 .lv-tag.field::after{content:"";position:absolute;right:calc(100% + 76px);top:calc(50% - 3px);width:6px;height:6px;border-radius:50%;background:#16832b}
+.lesson-2 .lv-tag.row::after{content:"";position:absolute;right:calc(100% + 43px);top:calc(50% - 3px);width:6px;height:6px;border-radius:50%;background:#075dff}
+.lesson-2 .lv-tag.top::before{content:"";position:absolute;left:-24px;top:50%;width:24px;height:14px;border-left:2px solid #075dff;border-top:2px solid #075dff;border-radius:7px 0 0 0}
+.lesson-2 .lv-tag.top::after{content:"";position:absolute;left:-26px;top:calc(50% + 11px);width:6px;height:6px;border-radius:50%;background:#075dff}
+.lesson-2 .lv-annotated{width:842px;padding:28px 213px 36px 22px;box-sizing:border-box}
+.lesson-2 .lv-two{width:787px;grid-template-columns:357px 402px;gap:28px;margin-left:22px}
 .lv-tag{position:absolute;border:1px solid #1d4ed8;color:#1d4ed8;background:white;border-radius:8px;padding:4px 8px;font-size:11px;font-weight:700}
 .lv-tag.top{top:0;left:30%}
 .lv-tag.field{top:42%;right:0;border-color:#15803d;color:#15803d}
 .lv-tag.row{bottom:8px;right:0}
-.lv-otm{display:grid;grid-template-columns:220px 1fr;gap:16px;align-items:center}
-.lv-otm .parent,.lv-otm .kids>div{border:1px solid #93b4f5;border-radius:12px;padding:12px 14px;font-weight:700;color:#1d4ed8}
+.lv-otm{position:relative;display:grid;grid-template-columns:286px 277px;gap:185px;align-items:center;min-height:172px;margin-left:22px;width:748px}
+.lv-otm-links{position:absolute;inset:0;width:100%;height:172px;pointer-events:none}
+.lv-otm-links path{fill:none;stroke:#075dff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.lv-otm-links marker path{fill:#075dff;stroke:none}
+.lv-otm-links .arrow{marker-end:url(#otm-arrow)}
+.lv-otm .parent,.lv-otm .kids{position:relative;z-index:1;background:#fff}
+.lv-otm .parent,.lv-otm .kids>div{border:1px solid #075dff;border-radius:8px;padding:9px 14px;font-weight:400;color:#111;display:flex;align-items:center;gap:12px;min-height:45px;box-sizing:border-box}
+.lv-otm .parent{min-height:74px}
+.lv-otm .parent b,.lv-otm .kids b{font-weight:700}
+.lv-otm-icon{width:27px;height:32px;fill:#075dff;stroke:#075dff;stroke-width:1.5;flex:0 0 auto}
+.lv-otm-icon.registration{width:38px;height:38px;fill:none;stroke:#fff;background:#075dff;border-radius:50%;padding:7px;box-sizing:border-box}
 .lv-otm .kids{display:grid;gap:8px}
 .lv-hub{position:relative;height:260px;margin:8px 0}
 .lv-hub .core{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:#1d4ed8;color:white;border-radius:14px;padding:14px 18px;text-align:center;font-weight:800;z-index:1}

@@ -174,14 +174,18 @@ function JourneyIcon({ index }: { index: number }) {
 }
 
 function TableSection({ section }: { section: ScreenSection }) {
+  const labels = section.labels && !Array.isArray(section.labels) ? section.labels : undefined;
+  const annotated = Boolean(labels);
+  const rows = annotated ? [['…', '…', '…', '…'], ...(section.rows ?? []), ['…', '…', '…', '…']] : (section.rows ?? []);
   return (
     <>
-      {section.labels && !Array.isArray(section.labels) ? (
+      {annotated ? (
         <div className="lv-annotated">
           <span className="lv-tag top">Table · Water Level</span>
-          <Table headers={section.columns ?? []} rows={section.rows ?? []} accent={0} />
-          {section.labels.field && <span className="lv-tag field">{section.labels.field}</span>}
-          {section.labels.row && <span className="lv-tag row">{section.labels.row}</span>}
+          <div className="lv-table-name">Water Level</div>
+          <Table headers={section.columns ?? []} rows={rows} accent={1} />
+          {labels?.field && <span className="lv-tag field">{labels.field}</span>}
+          {labels?.row && <span className="lv-tag row">{labels.row}</span>}
         </div>
       ) : <Table headers={section.columns ?? []} rows={section.rows ?? []} />}
       {section.info && <Info>{section.info}</Info>}
@@ -237,12 +241,23 @@ function Comparison({ section }: { section: ScreenSection }) {
     <div className="lv-two">
       {items.map((item, i) => (
         <article className={`lv-key ${i === 0 ? 'green' : 'blue'}`} key={itemTitle(item)}>
+          <KeyIcon composite={i === 1} />
           <b>{itemTitle(item)}</b>
           <p>{itemDetail(item)}</p>
           {typeof item !== 'string' && item.example && <small>Example: {item.example}</small>}
         </article>
       ))}
     </div>
+  );
+}
+
+function KeyIcon({ composite }: { composite: boolean }) {
+  return (
+    <svg className="lv-key-icon" viewBox="0 0 64 64" aria-hidden="true">
+      <circle cx="24" cy="20" r="11" /><circle cx="24" cy="20" r="4" />
+      <path d="M19 30 6 48v9h9l4-5h7v-7h6l7-10" />
+      {composite && <><circle cx="43" cy="19" r="9" /><path d="m40 28-3 23h7l2-6h6l1-7h5" /></>}
+    </svg>
   );
 }
 
@@ -265,12 +280,27 @@ function OneToMany({ section }: { section: ScreenSection }) {
   return (
     <>
       <div className="lv-otm">
-        <div className="parent">{typeof section.parent === 'string' ? section.parent : section.parent?.title}</div>
-        <div className="kids">{section.children?.map(c => <div key={c}>{c}</div>)}</div>
+        <svg className="lv-otm-links" viewBox="0 0 748 172" preserveAspectRatio="none" aria-hidden="true">
+          <defs><marker id="otm-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10Z" /></marker></defs>
+          <path d="M286 86h100M386 26v120" />
+          <path className="arrow" d="M386 26h82" />
+          <path className="arrow" d="M386 86h82" />
+          <path className="arrow" d="M386 146h82" />
+        </svg>
+        <div className="parent"><OtmIcon type="registration" /><span><b>Registration</b> · RN 123456</span></div>
+        <div className="kids">{section.children?.map(c => {
+          const [title, detail] = c.split(' - ');
+          return <div key={c}><OtmIcon type="water" /><span><b>{title}</b>{detail ? ` · ${detail}` : ''}</span></div>;
+        })}</div>
       </div>
       {section.caption && <p className="lv-caption">{section.caption}</p>}
     </>
   );
+}
+
+function OtmIcon({ type }: { type: 'registration' | 'water' }) {
+  if (type === 'water') return <svg className="lv-otm-icon" viewBox="0 0 32 40" aria-hidden="true"><path d="M16 2S5 18 5 26a11 11 0 0 0 22 0C27 18 16 2 16 2Z" /></svg>;
+  return <svg className="lv-otm-icon registration" viewBox="0 0 40 40" aria-hidden="true"><path d="M6 36V13l14-8 14 8v23M2 36h36M13 17h5v5h-5zM23 17h5v5h-5zM13 26h5v5h-5zM23 26h5v5h-5z" /></svg>;
 }
 
 function Definition({ section }: { section: ScreenSection }) {
