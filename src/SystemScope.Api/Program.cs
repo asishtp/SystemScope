@@ -45,6 +45,7 @@ api.MapScan();
 api.MapCatalog();
 api.MapWorkflow();
 api.MapDemoViews();
+api.MapLearning();
 app.MapGet("/health", () => Results.Ok(new { status = "Healthy" }));
 api.MapGet("/me",(ClaimsPrincipal u)=>new{name=u.Identity?.Name??"Local Assessor",roles=u.FindAll(ClaimTypes.Role).Select(x=>x.Value)});
 api.MapGet("/dashboard",async(Guid? projectId,AppDbContext db)=>await ScanApi.Dashboard(db,projectId));

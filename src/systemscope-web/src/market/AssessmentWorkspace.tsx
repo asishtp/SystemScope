@@ -47,6 +47,7 @@ export function AssessmentWorkspace({
   onNotice,
   onEvidence: onEvidenceProp,
   onOpenDocuments,
+  onOpenLearn,
 }: {
   scanKey: string;
   initialTab?: string;
@@ -55,6 +56,7 @@ export function AssessmentWorkspace({
   onNotice: (message: string) => void;
   onEvidence?: () => void;
   onOpenDocuments?: () => void;
+  onOpenLearn?: (key: string) => void;
 }) {
   const [data, setData] = useState<ScanWorkspace>();
   const [tab, setTab] = useState<TabId>(() => (TABS.some(t => t.id === initialTab) ? initialTab as TabId : 'overview'));
@@ -109,6 +111,7 @@ export function AssessmentWorkspace({
           </div>
         </div>
         <div className="scan-head-actions">
+          {onOpenLearn && scanKey.toLowerCase() === 'gwdb' && <button className="ghost" onClick={() => onOpenLearn(scanKey)}>Learn GWDB</button>}
           <button className="ghost" onClick={addEvidence}>＋ Add evidence</button>
           <button className="primary" onClick={() => onOpenDocuments ? onOpenDocuments() : setShowGenerate(true)}>Generate document</button>
         </div>

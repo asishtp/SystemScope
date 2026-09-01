@@ -49,6 +49,7 @@ export function SystemProfile({
   onOpenPublished,
   onOpenSystem,
   onEvidence,
+  onOpenLearn,
 }: {
   catalogKey: string;
   initialTab?: string;
@@ -57,6 +58,7 @@ export function SystemProfile({
   onOpenPublished: (recordId: string) => void;
   onOpenSystem: (key: string) => void;
   onEvidence: (key: string) => void;
+  onOpenLearn?: (key: string) => void;
 }) {
   const [data, setData] = useState<Payload>();
   const [tab, setTab] = useState(initialTab && TABS.some(t => t.toLowerCase() === initialTab.toLowerCase()) ? initialTab : 'Overview');
@@ -84,7 +86,7 @@ export function SystemProfile({
         </div>
         <div className="scan-head-actions">
           <button className="ghost">Edit system</button>
-          <button className="ghost">More</button>
+          {onOpenLearn && catalogKey.toLowerCase() === 'gwdb' && <button className="ghost" onClick={() => onOpenLearn(catalogKey)}>Learn GWDB</button>}
           <button className="primary" onClick={() => onOpenAssessment(catalogKey)}>Open assessment</button>
         </div>
       </header>

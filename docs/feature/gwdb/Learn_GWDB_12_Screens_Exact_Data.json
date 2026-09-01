@@ -1,0 +1,1321 @@
+{
+  "schemaVersion": "2.0",
+  "packageType": "learn-gwdb-screen-import",
+  "packageId": "learn-gwdb-12-screens-v2",
+  "importMode": "upsert",
+  "systemKey": "GWDB",
+  "course": {
+    "courseKey": "GWDB-FOUNDATIONS",
+    "title": "Learn the Groundwater Database",
+    "lessonCount": 12,
+    "description": "Understand the existing GWDB data model and business rules step by step."
+  },
+  "common": {
+    "application": "SystemScope",
+    "breadcrumb": [
+      "Water Monitoring Systems",
+      "Groundwater Database",
+      "Learn GWDB"
+    ],
+    "searchPlaceholder": "Search lessons, tables and terms...",
+    "navigation": [
+      "Overview",
+      "Architecture",
+      "Applications",
+      "Database",
+      "Integrations",
+      "Processes",
+      "Documentation",
+      "Learn GWDB"
+    ],
+    "selectedNavigation": "Learn GWDB",
+    "notesButton": "My notes",
+    "completionButton": "Mark lesson complete"
+  },
+  "lessons": [
+    {
+      "lessonKey": "GWDB-L01",
+      "displayOrder": 1,
+      "status": "Published",
+      "number": 1,
+      "title": "Understanding the GWDB Data Model",
+      "subtitle": "Start with the purpose, structure and key concepts of the existing Groundwater Database.",
+      "durationMinutes": 12,
+      "evidenceStatus": "Documented",
+      "progressPercent": 8,
+      "inThisLesson": [
+        "GWDB purpose",
+        "Core business entities",
+        "Identifiers and keys",
+        "Parent and child records",
+        "Reference data",
+        "Observation context",
+        "How to use this course"
+      ],
+      "sections": [
+        {
+          "number": 1,
+          "title": "What the GWDB represents",
+          "type": "hubDiagram",
+          "hub": "Bore",
+          "items": [
+            {
+              "title": "Location",
+              "detail": "Coordinates · Area"
+            },
+            {
+              "title": "Construction",
+              "detail": "Pipes · Strata"
+            },
+            {
+              "title": "Monitoring",
+              "detail": "Water Levels · Quality"
+            },
+            {
+              "title": "Documents",
+              "detail": "Projects · References"
+            }
+          ],
+          "info": "The bore is the central real-world asset; related records describe where it is, how it was built and what was observed."
+        },
+        {
+          "number": 2,
+          "title": "How to read the data model",
+          "type": "conceptFlow",
+          "items": [
+            {
+              "title": "Entity",
+              "detail": "A business object",
+              "example": "Example: Bore"
+            },
+            {
+              "title": "Identifier",
+              "detail": "A value that uniquely finds a record",
+              "example": "Example: RN"
+            },
+            {
+              "title": "Relationship",
+              "detail": "A link between records",
+              "example": "Example: Bore has Pipes"
+            }
+          ],
+          "warning": "Similar names do not guarantee the same meaning—always check keys, definitions and relationships."
+        },
+        {
+          "number": 3,
+          "title": "Example record journey",
+          "type": "sequence",
+          "items": [
+            {
+              "title": "Bore registered",
+              "detail": "RN 123456"
+            },
+            {
+              "title": "Pipe constructed",
+              "detail": "Pipe A"
+            },
+            {
+              "title": "Water level recorded",
+              "detail": "-14.3 m"
+            },
+            {
+              "title": "Sample analysed",
+              "detail": "Nitrate 3.4 mg/L"
+            }
+          ],
+          "info": "Each observation keeps its own context while remaining traceable to the bore."
+        }
+      ],
+      "keyTakeaways": [
+        "GWDB models groundwater assets and observations.",
+        "The bore is a central point of connection.",
+        "Identifiers distinguish one record from another.",
+        "Relationships provide meaning and traceability."
+      ],
+      "source": {
+        "title": "GWDB Data Dictionary",
+        "detail": "Introduction and Data Model Overview"
+      },
+      "previous": "Back to course overview",
+      "next": "Core Identifiers and Bore Records"
+    },
+    {
+      "lessonKey": "GWDB-L02",
+      "displayOrder": 2,
+      "status": "Published",
+      "number": 2,
+      "title": "Database Fundamentals",
+      "subtitle": "Learn tables, fields, rows, keys and relationships using real GWDB examples.",
+      "durationMinutes": 10,
+      "evidenceStatus": "Documented",
+      "progressPercent": 17,
+      "inThisLesson": [
+        "Tables, fields and rows",
+        "Primary keys",
+        "Composite keys",
+        "Foreign keys",
+        "One-to-many relationships",
+        "Logical vs physical model"
+      ],
+      "sections": [
+        {
+          "number": 1,
+          "title": "Table, field and row",
+          "type": "table",
+          "columns": [
+            "Registered Number",
+            "Pipe",
+            "Date",
+            "Measurement"
+          ],
+          "rows": [
+            [
+              "123456",
+              "A",
+              "01/08/2026",
+              "-14.3 m"
+            ]
+          ],
+          "labels": {
+            "field": "Field - Measurement",
+            "row": "Row - One water-level observation"
+          }
+        },
+        {
+          "number": 2,
+          "title": "Primary and composite keys",
+          "type": "comparison",
+          "items": [
+            {
+              "title": "Primary key",
+              "detail": "Uniquely identifies one row",
+              "example": "Registration: Registered Number"
+            },
+            {
+              "title": "Composite key",
+              "detail": "Uses multiple fields together",
+              "example": "RN + Pipe + Date + Time"
+            }
+          ]
+        },
+        {
+          "number": 3,
+          "title": "One-to-many relationship",
+          "type": "oneToMany",
+          "parent": "Registration - RN 123456",
+          "children": [
+            "Water Level - 1 August",
+            "Water Level - 2 August",
+            "Water Level - 3 August"
+          ],
+          "caption": "one facility → many measurements"
+        }
+      ],
+      "keyTakeaways": [
+        "A table stores one subject.",
+        "A row represents one record.",
+        "A key identifies a row.",
+        "RN connects GWDB tables."
+      ],
+      "source": {
+        "title": "GWDB Data Dictionary",
+        "pages": "21–23",
+        "detail": "GWDB Structure and Concepts"
+      },
+      "previous": "What is GWDB?",
+      "next": "Registered Number (RN)"
+    },
+    {
+      "lessonKey": "GWDB-L03",
+      "displayOrder": 3,
+      "status": "Published",
+      "number": 3,
+      "title": "Registered Number (RN)",
+      "subtitle": "Learn how RN uniquely identifies a facility and connects records across GWDB tables.",
+      "durationMinutes": 10,
+      "evidenceStatus": "Documented",
+      "progressPercent": 25,
+      "inThisLesson": [
+        "What RN means",
+        "How RN connects tables",
+        "RN as a business key",
+        "Multiple pipes",
+        "Bore replacement",
+        "Verification checks"
+      ],
+      "sections": [
+        {
+          "number": 1,
+          "title": "What is a Registered Number?",
+          "type": "definition",
+          "text": "Every facility in GWDB is assigned a Registered Number. The RN uniquely identifies the facility and is the common identifier connecting GWDB subject tables.",
+          "example": "Registered Number: 123456"
+        },
+        {
+          "number": 2,
+          "title": "How RN connects the tables",
+          "type": "hubDiagram",
+          "hub": "Registration · RN 123456",
+          "items": [
+            "Water Analysis",
+            "Images",
+            "Water Level"
+          ]
+        },
+        {
+          "number": 3,
+          "title": "RN is a business key",
+          "type": "comparison",
+          "items": [
+            {
+              "title": "Business key",
+              "value": "RN 123456",
+              "detail": "Understood by groundwater staff"
+            },
+            {
+              "title": "Technical key",
+              "value": "UUID",
+              "detail": "Used internally by an application"
+            }
+          ]
+        }
+      ],
+      "keyTakeaways": [
+        "RN identifies the facility.",
+        "Registration is the central record.",
+        "RN connects subject tables.",
+        "Child rows need additional identifiers."
+      ],
+      "source": {
+        "title": "GWDB Data Dictionary",
+        "pages": "21–22",
+        "detail": "Registered Number"
+      },
+      "previous": "Database Fundamentals",
+      "next": "Pipe, Date and Record"
+    },
+    {
+      "lessonKey": "GWDB-L04",
+      "displayOrder": 4,
+      "status": "Published",
+      "number": 4,
+      "title": "Pipe, Date and Record",
+      "subtitle": "Understand how GWDB identifies pipes and repeated records within the same facility.",
+      "durationMinutes": 12,
+      "evidenceStatus": "Documented",
+      "progressPercent": 33,
+      "inThisLesson": [
+        "Registered Number recap",
+        "Single and multiple pipes",
+        "Pipe A, B and C",
+        "Pipe X",
+        "Date",
+        "Record",
+        "Composite identification"
+      ],
+      "sections": [
+        {
+          "number": 1,
+          "title": "One RN can have multiple pipes",
+          "type": "pipeDiagram",
+          "rn": "RN 123456",
+          "pipes": [
+            {
+              "code": "A",
+              "detail": "Deepest pipe"
+            },
+            {
+              "code": "B",
+              "detail": "Second deepest"
+            },
+            {
+              "code": "C",
+              "detail": "Additional pipe"
+            },
+            {
+              "code": "X",
+              "detail": "Borehole or material not related to a completed pipe"
+            }
+          ]
+        },
+        {
+          "number": 2,
+          "title": "Why Date and Record are needed",
+          "type": "table",
+          "columns": [
+            "Registered Number",
+            "Pipe",
+            "Date",
+            "Record",
+            "Observation"
+          ],
+          "rows": [
+            [
+              "123456",
+              "A",
+              "01/08/2026",
+              "1",
+              "Water-level reading"
+            ],
+            [
+              "123456",
+              "A",
+              "01/08/2026",
+              "2",
+              "Second observation"
+            ],
+            [
+              "123456",
+              "B",
+              "02/08/2026",
+              "1",
+              "Pipe B observation"
+            ]
+          ],
+          "info": "All rows share the same Registered Number (RN 123456) but are distinguished by Pipe, Date and Record."
+        },
+        {
+          "number": 3,
+          "title": "Composite identification",
+          "type": "formula",
+          "parts": [
+            {
+              "value": "Registered Number",
+              "meaning": "Facility"
+            },
+            {
+              "value": "Pipe",
+              "meaning": "Which pipe"
+            },
+            {
+              "value": "Date",
+              "meaning": "When recorded"
+            },
+            {
+              "value": "Record",
+              "meaning": "Repeated row"
+            }
+          ]
+        }
+      ],
+      "keyTakeaways": [
+        "RN identifies the facility.",
+        "Pipe identifies the bore pipe.",
+        "Date separates observations over time.",
+        "Record separates repeated rows."
+      ],
+      "source": {
+        "title": "GWDB Data Dictionary",
+        "pages": "21–23",
+        "detail": "Identification Data"
+      },
+      "previous": "Registered Number (RN)",
+      "next": "Registration Table"
+    },
+    {
+      "lessonKey": "GWDB-L05",
+      "displayOrder": 5,
+      "status": "Published",
+      "number": 5,
+      "title": "Registration Table",
+      "subtitle": "Explore the central facility record, its location, status, ownership and drilling information.",
+      "durationMinutes": 15,
+      "evidenceStatus": "Documented",
+      "progressPercent": 42,
+      "inThisLesson": [
+        "Registration purpose",
+        "Registered Number",
+        "Facility classification",
+        "Geographic location",
+        "Drilling information",
+        "Ownership and confidentiality",
+        "Bore replacement"
+      ],
+      "sections": [
+        {
+          "number": 1,
+          "title": "The central GWDB table",
+          "type": "hubDiagram",
+          "hub": "Registration · Primary business identifier – Registered Number (RN)",
+          "items": [
+            "Casing",
+            "Aquifer",
+            "Water Level",
+            "Water Analysis",
+            "Images"
+          ],
+          "info": "Registration must contain a facility record before information can be stored in another GWDB subject table."
+        },
+        {
+          "number": 2,
+          "title": "Registration attribute groups",
+          "type": "groups",
+          "groups": [
+            {
+              "title": "Identity",
+              "items": [
+                "Registered Number",
+                "Original Facility Number",
+                "Property Name"
+              ]
+            },
+            {
+              "title": "Classification",
+              "items": [
+                "Facility Type",
+                "Facility Status",
+                "Facility Role"
+              ]
+            },
+            {
+              "title": "Location",
+              "items": [
+                "Latitude and Longitude",
+                "Easting and Northing",
+                "Datum and Accuracy"
+              ]
+            },
+            {
+              "title": "Drilling",
+              "items": [
+                "Drilled Date",
+                "Driller",
+                "Construction Method"
+              ]
+            },
+            {
+              "title": "Administration",
+              "items": [
+                "Office",
+                "File Numbers",
+                "Data Owner"
+              ]
+            },
+            {
+              "title": "Governance",
+              "items": [
+                "Confidential",
+                "Checked",
+                "RN of Bore Replaced"
+              ]
+            }
+          ]
+        },
+        {
+          "number": 3,
+          "title": "Compulsory fields",
+          "type": "requiredFields",
+          "items": [
+            "Office",
+            "Facility Type",
+            "Facility Status"
+          ],
+          "rule": "Log Received Date cannot be before Drilled Date."
+        }
+      ],
+      "keyTakeaways": [
+        "Registration is the central table.",
+        "RN identifies the facility.",
+        "Subject data depends on Registration.",
+        "Location and status are controlled."
+      ],
+      "source": {
+        "title": "GWDB Data Dictionary",
+        "pages": "25–36",
+        "detail": "Registration Table"
+      },
+      "previous": "Pipe, Date and Record",
+      "next": "Construction and Casing"
+    },
+    {
+      "lessonKey": "GWDB-L06",
+      "displayOrder": 6,
+      "status": "Published",
+      "number": 6,
+      "title": "Construction and Casing",
+      "subtitle": "Learn how GWDB records bore construction materials, diameters and depth intervals.",
+      "durationMinutes": 15,
+      "evidenceStatus": "Documented",
+      "progressPercent": 50,
+      "inThisLesson": [
+        "Casing purpose",
+        "Material intervals",
+        "Top and bottom depths",
+        "Outside diameter",
+        "Pipe-specific records",
+        "Pipe X",
+        "Data-quality checks"
+      ],
+      "sections": [
+        {
+          "number": 1,
+          "title": "How casing is recorded",
+          "type": "depthDiagram",
+          "pipe": "Pipe A",
+          "intervals": [
+            {
+              "material": "Steel casing",
+              "top": "0 m",
+              "bottom": "40 m"
+            },
+            {
+              "material": "PVC casing",
+              "top": "40 m",
+              "bottom": "85 m"
+            },
+            {
+              "material": "Screen",
+              "top": "85 m",
+              "bottom": "100 m"
+            }
+          ]
+        },
+        {
+          "number": 2,
+          "title": "Casing Table attributes",
+          "type": "table",
+          "columns": [
+            "Registered Number",
+            "Pipe",
+            "Material",
+            "Outside Diameter",
+            "Top",
+            "Bottom"
+          ],
+          "rows": [
+            [
+              "123456",
+              "A",
+              "Steel casing",
+              "150 mm",
+              "0 m",
+              "40 m"
+            ],
+            [
+              "123456",
+              "A",
+              "PVC casing",
+              "125 mm",
+              "40 m",
+              "85 m"
+            ],
+            [
+              "123456",
+              "A",
+              "Screen",
+              "125 mm",
+              "85 m",
+              "100 m"
+            ]
+          ]
+        },
+        {
+          "number": 3,
+          "title": "Casing record",
+          "type": "recordCard",
+          "identifier": "RN 123456 · Pipe A · Date · Record",
+          "fields": [
+            "Registered Number",
+            "Pipe",
+            "Date",
+            "Record",
+            "Description"
+          ],
+          "description": "Construction casing for Pipe A",
+          "pipeX": "Used for borehole records or construction materials not directly related to a completed pipe.",
+          "examples": [
+            "Grout",
+            "Gravel pack",
+            "During drilling"
+          ]
+        }
+      ],
+      "keyTakeaways": [
+        "Casing records construction materials.",
+        "Depth intervals use top and bottom.",
+        "RN and Pipe identify the facility context.",
+        "Pipe X supports non-pipe materials."
+      ],
+      "source": {
+        "title": "GWDB Data Dictionary",
+        "pages": "37–44",
+        "detail": "Casing Table"
+      },
+      "previous": "Registration Table",
+      "next": "Strata, Aquifers and Lithology"
+    },
+    {
+      "lessonKey": "GWDB-L07",
+      "displayOrder": 7,
+      "status": "Published",
+      "number": 7,
+      "title": "Strata, Aquifers and Lithology",
+      "subtitle": "Understand geological layers, water-bearing intervals and formation information recorded in GWDB.",
+      "durationMinutes": 15,
+      "evidenceStatus": "Documented",
+      "progressPercent": 58,
+      "inThisLesson": [
+        "Geology concepts",
+        "Strata Log",
+        "Aquifer",
+        "Lithology",
+        "Formation Name",
+        "Depth validation",
+        "Relationship verification"
+      ],
+      "sections": [
+        {
+          "number": 1,
+          "title": "Reading the underground layers",
+          "type": "geologyDiagram",
+          "layers": [
+            {
+              "table": "Strata Log",
+              "detail": "Records geological layers",
+              "key": "RN + Record + Top + Bottom + Description"
+            },
+            {
+              "table": "Aquifer",
+              "detail": "Records water-bearing intervals",
+              "key": "RN + Record + Top + Bottom + Yield + Condition + Formation"
+            }
+          ]
+        },
+        {
+          "number": 2,
+          "title": "How the tables relate",
+          "type": "relationship",
+          "items": [
+            "Strata Log",
+            "Registration - RN 123456",
+            "Aquifer",
+            "Lithologies"
+          ],
+          "note": "RN + Record – inferred relationship",
+          "warning": "Requires Oracle verification"
+        },
+        {
+          "number": 3,
+          "title": "Example records",
+          "type": "tables",
+          "tables": [
+            {
+              "title": "Strata Log",
+              "columns": [
+                "Record",
+                "Top (m)",
+                "Bottom (m)",
+                "Description"
+              ],
+              "rows": [
+                [
+                  "1",
+                  "0",
+                  "15",
+                  "Clay"
+                ],
+                [
+                  "3",
+                  "45",
+                  "70",
+                  "Sand and gravel"
+                ]
+              ]
+            },
+            {
+              "title": "Aquifer",
+              "columns": [
+                "Record",
+                "Top (m)",
+                "Bottom (m)",
+                "Yield (L/s)",
+                "Condition"
+              ],
+              "rows": [
+                [
+                  "3",
+                  "45",
+                  "70",
+                  "2.5",
+                  "Contributing"
+                ]
+              ]
+            }
+          ]
+        }
+      ],
+      "keyTakeaways": [
+        "Strata describe geological layers.",
+        "Aquifers contain groundwater.",
+        "Top depth must not exceed bottom.",
+        "Lithology describes material type."
+      ],
+      "source": {
+        "title": "GWDB Data Dictionary",
+        "pages": "45–48",
+        "detail": "Strata Log and Aquifer"
+      },
+      "previous": "Construction and Casing",
+      "next": "Water Levels and Bore Logger Data"
+    },
+    {
+      "lessonKey": "GWDB-L08",
+      "displayOrder": 8,
+      "status": "Published",
+      "number": 8,
+      "title": "Water Levels and Bore Logger Data",
+      "subtitle": "Compare recorded water-level observations with measurements derived from automatic bore loggers.",
+      "durationMinutes": 15,
+      "evidenceStatus": "Documented",
+      "progressPercent": 67,
+      "inThisLesson": [
+        "Measuring Point",
+        "Measurement sign",
+        "Water Level table",
+        "Bore Logger Data",
+        "Measurement Type",
+        "Quality and collection",
+        "Historical elevation rule"
+      ],
+      "sections": [
+        {
+          "number": 1,
+          "title": "How a water level is measured",
+          "type": "measurementDiagram",
+          "labels": [
+            "R · Reference Point (Top of Casing)",
+            "N · Natural Surface",
+            "Measurement · -14.3 m"
+          ],
+          "info": "Measurements below the Measurement Point are negative."
+        },
+        {
+          "number": 2,
+          "title": "Water Level and Bore Logger Data",
+          "type": "comparison",
+          "items": [
+            {
+              "title": "Water Level",
+              "detail": "Individual recorded observation",
+              "fields": [
+                "RN · Pipe · Date · Time",
+                "Measurement · Measurement Point",
+                "Quality · Collection Method · Project"
+              ]
+            },
+            {
+              "title": "Bore Logger Data",
+              "detail": "Logger-derived observation",
+              "fields": [
+                "RN · Pipe · Date",
+                "Measurement · Measurement Point",
+                "Quality · Collection Method · Hydstra Site ID"
+              ]
+            }
+          ],
+          "relationship": "Similar observation context",
+          "warning": "Confirm lineage and deduplication rules."
+        },
+        {
+          "number": 3,
+          "title": "Example observations",
+          "type": "table",
+          "columns": [
+            "Measurement Type",
+            "RN",
+            "Pipe",
+            "Date",
+            "Time / Frequency",
+            "Measurement",
+            "Measurement Point"
+          ],
+          "rows": [
+            [
+              "Manual",
+              "123456",
+              "A",
+              "01/08/2026",
+              "10:30",
+              "-14.3 m",
+              "ACT"
+            ],
+            [
+              "Logger",
+              "123456",
+              "A",
+              "02/08/2026",
+              "Daily",
+              "-14.5 m",
+              "DM"
+            ]
+          ],
+          "info": "Pre-October 1982 water levels were derived using Elevation data."
+        }
+      ],
+      "keyTakeaways": [
+        "Measurements are stored in metres.",
+        "Sign depends on the Measurement Point.",
+        "ACT means Actual.",
+        "DM means Daily Mean."
+      ],
+      "source": {
+        "title": "GWDB Data Dictionary",
+        "pages": "75–87",
+        "detail": "Water Level and Bore Logger Data"
+      },
+      "previous": "Strata, Aquifers and Lithology",
+      "next": "Pumping Tests and Flow Readings"
+    },
+    {
+      "lessonKey": "GWDB-L09",
+      "displayOrder": 9,
+      "status": "Published",
+      "number": 9,
+      "title": "Pumping Tests and Flow Readings",
+      "subtitle": "Understand how pumping tests, discharge measurements and flow observations describe bore performance.",
+      "durationMinutes": 18,
+      "evidenceStatus": "Documented",
+      "progressPercent": 75,
+      "inThisLesson": [
+        "Pumping-test purpose",
+        "Static and pumping levels",
+        "Drawdown",
+        "Discharge and flow units",
+        "Test stages",
+        "Measurement methods",
+        "Quality and collection"
+      ],
+      "sections": [
+        {
+          "number": 1,
+          "title": "How a pumping test works",
+          "type": "pumpingDiagram",
+          "labels": [
+            "Static water level",
+            "Pumping water level",
+            "Drawdown",
+            "Discharge (L/s)"
+          ]
+        },
+        {
+          "number": 2,
+          "title": "Test and flow data",
+          "type": "comparison",
+          "items": [
+            {
+              "title": "Pumping Test",
+              "fields": [
+                "RN · Pipe · Test Date",
+                "Static Level · Pumping Level",
+                "Duration · Drawdown"
+              ]
+            },
+            {
+              "title": "Flow Reading",
+              "fields": [
+                "Discharge · Unit",
+                "Measurement Method",
+                "Quality · Collection Method"
+              ]
+            }
+          ],
+          "relationship": "Related through bore, pipe and test context",
+          "warning": "Confirm units, test stage and measurement time before comparison."
+        },
+        {
+          "number": 3,
+          "title": "Example pumping-test readings",
+          "type": "table",
+          "columns": [
+            "RN",
+            "Pipe",
+            "Test Stage",
+            "Elapsed Time",
+            "Water Level",
+            "Discharge",
+            "Method"
+          ],
+          "rows": [
+            [
+              "123456",
+              "A",
+              "Step 1",
+              "30 min",
+              "-18.2 m",
+              "4.5 L/s",
+              "Flow meter"
+            ],
+            [
+              "123456",
+              "A",
+              "Step 2",
+              "60 min",
+              "-21.6 m",
+              "7.8 L/s",
+              "Flow meter"
+            ]
+          ],
+          "info": "Drawdown = pumping water level minus static water level."
+        }
+      ],
+      "keyTakeaways": [
+        "Tests describe bore response under pumping.",
+        "Time and test stage provide essential context.",
+        "Flow values must always be interpreted with units.",
+        "Quality and method affect reuse."
+      ],
+      "source": {
+        "title": "GWDB Data Dictionary",
+        "detail": "Pumping Test and Flow Data"
+      },
+      "previous": "Water Levels and Bore Logger Data",
+      "next": "Water Quality and Samples"
+    },
+    {
+      "lessonKey": "GWDB-L10",
+      "displayOrder": 10,
+      "status": "Published",
+      "number": 10,
+      "title": "Water Quality and Samples",
+      "subtitle": "Learn how groundwater samples, laboratory results and analytes are connected and interpreted.",
+      "durationMinutes": 20,
+      "evidenceStatus": "Documented",
+      "progressPercent": 83,
+      "inThisLesson": [
+        "Sample identity",
+        "Collection event",
+        "Analytes",
+        "Results and units",
+        "Detection limits",
+        "Qualifiers",
+        "Laboratory methods"
+      ],
+      "sections": [
+        {
+          "number": 1,
+          "title": "From bore to laboratory result",
+          "type": "sequence",
+          "items": [
+            {
+              "title": "Bore and pipe",
+              "detail": "RN + Pipe"
+            },
+            {
+              "title": "Sample collection",
+              "detail": "Sample ID + Date"
+            },
+            {
+              "title": "Laboratory analysis",
+              "detail": "Lab reference"
+            },
+            {
+              "title": "Analyte result",
+              "detail": "Analyte + Result + Unit"
+            }
+          ],
+          "info": "A result is meaningful only when its sample, method and unit are known."
+        },
+        {
+          "number": 2,
+          "title": "Core water-quality relationships",
+          "type": "oneToMany",
+          "parent": {
+            "title": "Water Sample",
+            "fields": [
+              "RN · Pipe · Sample Date",
+              "Sample ID · Project",
+              "Collection Method · Quality"
+            ]
+          },
+          "child": {
+            "title": "Sample Result",
+            "fields": [
+              "Analyte · Result · Unit",
+              "Detection Limit · Qualifier",
+              "Laboratory · Analysis Method"
+            ]
+          },
+          "relationship": "One sample has many results",
+          "warning": "Do not compare results until units and detection limits are aligned."
+        },
+        {
+          "number": 3,
+          "title": "Example laboratory results",
+          "type": "table",
+          "columns": [
+            "Sample ID",
+            "Analyte",
+            "Result",
+            "Unit",
+            "Detection Limit",
+            "Qualifier"
+          ],
+          "rows": [
+            [
+              "GW-2026-018",
+              "pH",
+              "7.2",
+              "pH units",
+              "0.1",
+              "Valid"
+            ],
+            [
+              "GW-2026-018",
+              "Nitrate",
+              "3.4",
+              "mg/L",
+              "0.05",
+              "Valid"
+            ]
+          ],
+          "info": "Keep numeric result, unit, qualifier and detection limit together."
+        }
+      ],
+      "keyTakeaways": [
+        "One sample can contain many analyte results.",
+        "Units are essential when comparing results.",
+        "Qualifiers explain how a result should be used.",
+        "Trace every result back to its bore and sample."
+      ],
+      "source": {
+        "title": "GWDB Data Dictionary",
+        "detail": "Water Quality and Sample Data"
+      },
+      "previous": "Pumping Tests and Flow Readings",
+      "next": "Projects, Documents and References"
+    },
+    {
+      "lessonKey": "GWDB-L11",
+      "displayOrder": 11,
+      "status": "Published",
+      "number": 11,
+      "title": "Projects, Documents and References",
+      "subtitle": "Understand how projects provide business context and how supporting documents are linked to groundwater records.",
+      "durationMinutes": 15,
+      "evidenceStatus": "Documented",
+      "progressPercent": 92,
+      "inThisLesson": [
+        "Project purpose",
+        "Project membership",
+        "Document metadata",
+        "Document types",
+        "External references",
+        "Record linking",
+        "Version and status"
+      ],
+      "sections": [
+        {
+          "number": 1,
+          "title": "How context is connected",
+          "type": "hubDiagram",
+          "hub": "Project",
+          "items": [
+            {
+              "title": "Bore and Pipe",
+              "detail": "RN · Pipe"
+            },
+            {
+              "title": "Monitoring Event",
+              "detail": "Date · Activity"
+            },
+            {
+              "title": "Document",
+              "detail": "Document ID · Type"
+            },
+            {
+              "title": "External Reference",
+              "detail": "Reference No. · Source"
+            }
+          ],
+          "info": "Projects group related groundwater work without replacing the identity of each record."
+        },
+        {
+          "number": 2,
+          "title": "Document and reference metadata",
+          "type": "comparison",
+          "items": [
+            {
+              "title": "Document",
+              "fields": [
+                "Document ID · Title",
+                "Document Type · Date",
+                "File Location · Version"
+              ]
+            },
+            {
+              "title": "Reference",
+              "fields": [
+                "Reference Number · Source",
+                "Related Entity · Related ID",
+                "Description · Status"
+              ]
+            }
+          ],
+          "relationship": "Linked by project or record context",
+          "warning": "Store metadata and links consistently; do not rely on filenames alone."
+        },
+        {
+          "number": 3,
+          "title": "Example linked records",
+          "type": "table",
+          "columns": [
+            "Project",
+            "Related Record",
+            "Record ID",
+            "Document Type",
+            "Reference",
+            "Status"
+          ],
+          "rows": [
+            [
+              "GW Monitoring 2026",
+              "Bore",
+              "RN 123456",
+              "Bore log",
+              "DOC-0182",
+              "Current"
+            ],
+            [
+              "GW Monitoring 2026",
+              "Water Sample",
+              "GW-2026-018",
+              "Lab report",
+              "LAB-4471",
+              "Current"
+            ]
+          ],
+          "info": "A project supplies context; the related record retains its own identifier and lifecycle."
+        }
+      ],
+      "keyTakeaways": [
+        "Projects group related groundwater activities.",
+        "Documents need stable identifiers and metadata.",
+        "References must identify their source and related record.",
+        "Links should preserve record traceability."
+      ],
+      "source": {
+        "title": "GWDB Data Dictionary",
+        "detail": "Project, Document and Reference Data"
+      },
+      "previous": "Water Quality and Samples",
+      "next": "Data Quality, Audit and Reporting"
+    },
+    {
+      "lessonKey": "GWDB-L12",
+      "displayOrder": 12,
+      "status": "Published",
+      "number": 12,
+      "title": "Data Quality, Audit and Reporting",
+      "subtitle": "Learn how validation, audit history and reporting controls support trustworthy groundwater information.",
+      "durationMinutes": 18,
+      "evidenceStatus": "Documented",
+      "progressPercent": 100,
+      "inThisLesson": [
+        "Quality dimensions",
+        "Validation rules",
+        "Warnings and errors",
+        "Correction workflow",
+        "Audit history",
+        "Reporting readiness",
+        "Record traceability"
+      ],
+      "sections": [
+        {
+          "number": 1,
+          "title": "From data entry to trusted reporting",
+          "type": "sequence",
+          "items": [
+            {
+              "title": "Data Entry",
+              "detail": "Source · User · Date"
+            },
+            {
+              "title": "Validation",
+              "detail": "Required · Format · Range"
+            },
+            {
+              "title": "Audit History",
+              "detail": "Who · What · When"
+            },
+            {
+              "title": "Reporting",
+              "detail": "Approved · Traceable"
+            }
+          ],
+          "info": "A trustworthy report must be traceable to its source record and changes."
+        },
+        {
+          "number": 2,
+          "title": "Quality and audit controls",
+          "type": "comparison",
+          "items": [
+            {
+              "title": "Data Quality",
+              "fields": [
+                "Completeness · Validity",
+                "Consistency · Uniqueness",
+                "Accuracy · Timeliness"
+              ]
+            },
+            {
+              "title": "Audit Record",
+              "fields": [
+                "Entity · Record ID",
+                "Changed By · Changed Date",
+                "Old Value · New Value"
+              ]
+            }
+          ],
+          "relationship": "Controls protect the reporting chain",
+          "warning": "Warnings require review; corrections must preserve the original audit history."
+        },
+        {
+          "number": 3,
+          "title": "Example validation results",
+          "type": "table",
+          "columns": [
+            "Record",
+            "Check",
+            "Result",
+            "Severity",
+            "Action",
+            "Status"
+          ],
+          "rows": [
+            [
+              "RN 123456",
+              "Coordinates present",
+              "Pass",
+              "—",
+              "None",
+              "Valid"
+            ],
+            [
+              "GW-2026-018",
+              "Unit supplied",
+              "Warning",
+              "Medium",
+              "Review unit",
+              "Open"
+            ]
+          ],
+          "info": "Validation status, reviewer action and audit history should remain available for reporting."
+        }
+      ],
+      "keyTakeaways": [
+        "Quality controls run before reporting.",
+        "Audit history records who changed what and when.",
+        "Corrections must not erase prior values.",
+        "Reports should expose validation status and lineage."
+      ],
+      "source": {
+        "title": "GWDB Data Dictionary",
+        "detail": "Quality, Audit and Reporting Data"
+      },
+      "previous": "Projects, Documents and References",
+      "next": "Review all lessons",
+      "completionButton": "Complete Learn GWDB",
+      "completionBanner": "Lesson 12 completes the GWDB data-model learning pathway."
+    }
+  ]
+}

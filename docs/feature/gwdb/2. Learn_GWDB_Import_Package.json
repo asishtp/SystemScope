@@ -1,0 +1,302 @@
+{
+  "schemaVersion": "1.0",
+  "packageType": "system-learning-course",
+  "packageId": "learn-gwdb-v1",
+  "generatedAtUtc": "2026-09-01T04:30:00Z",
+  "importMode": "upsert",
+  "system": {
+    "systemKey": "GWDB",
+    "name": "Groundwater Database",
+    "learningFeatureName": "Learn GWDB"
+  },
+  "course": {
+    "courseKey": "GWDB-FOUNDATIONS",
+    "title": "Learn GWDB",
+    "description": "Understand the existing Groundwater Database architecture, data model, terminology and business rules step by step.",
+    "status": "Draft",
+    "displayOrder": 1,
+    "estimatedMinutes": 170,
+    "version": 1,
+    "tags": ["GWDB", "groundwater", "Oracle", "data-model", "existing-system"]
+  },
+  "evidenceStatuses": [
+    {
+      "key": "DOCUMENTED",
+      "name": "Documented",
+      "description": "Explicitly stated in an approved GWDB source document.",
+      "colour": "#2E7D32"
+    },
+    {
+      "key": "INFERRED",
+      "name": "Inferred",
+      "description": "Derived from table structure, repeated identifiers or technical analysis and awaiting verification.",
+      "colour": "#ED6C02"
+    },
+    {
+      "key": "SCHEMA_VERIFIED",
+      "name": "Schema verified",
+      "description": "Confirmed using Oracle DDL, database metadata or source code.",
+      "colour": "#1565C0"
+    }
+  ],
+  "documents": [
+    {
+      "documentKey": "GWDB-DATA-DICTIONARY-2024",
+      "title": "Groundwater Database - Metadata, Data Dictionary & Standards",
+      "fileName": "GWDB_Data_Dictionary_Internal.pdf",
+      "version": "21/10/2024",
+      "classification": "Internal",
+      "isAuthoritative": true
+    }
+  ],
+  "lessons": [
+    {
+      "lessonKey": "GWDB-L01",
+      "title": "What is GWDB?",
+      "summary": "Understand the purpose of GWDB and how subject tables organise groundwater information.",
+      "durationMinutes": 8,
+      "displayOrder": 1,
+      "status": "Published",
+      "evidenceStatus": "DOCUMENTED",
+      "objectives": [
+        "Explain the purpose of GWDB.",
+        "Recognise Registration as the mandatory facility record.",
+        "Identify examples of GWDB subject tables."
+      ],
+      "contentMarkdown": "# What is GWDB?\n\nThe Groundwater Database, or **GWDB**, stores information about groundwater facilities and related scientific, operational and administrative records.\n\nGWDB is a relational database. Information is separated into subject tables such as Registration, Casing, Aquifer, Water Level and Water Analysis.\n\n## Central idea\n\nA record must exist in the Registration table before information can be stored in another GWDB subject table.\n\n## Remember\n\n- GWDB contains multiple related tables.\n- Registration identifies the facility.\n- Registered Number connects records belonging to that facility.",
+      "sources": [
+        {
+          "documentKey": "GWDB-DATA-DICTIONARY-2024",
+          "pageFrom": 18,
+          "pageTo": 24,
+          "sectionName": "Database System; GWDB Structure and Concepts; Description of Data Tables",
+          "evidenceStatus": "DOCUMENTED"
+        }
+      ],
+      "questions": [
+        {
+          "questionKey": "GWDB-L01-Q01",
+          "questionText": "Which table must contain a record before data can be stored in another GWDB subject table?",
+          "explanation": "Registration is the mandatory facility-level record.",
+          "displayOrder": 1,
+          "options": [
+            {"optionKey": "A", "text": "Registration", "isCorrect": true, "displayOrder": 1},
+            {"optionKey": "B", "text": "Water Level", "isCorrect": false, "displayOrder": 2},
+            {"optionKey": "C", "text": "Images", "isCorrect": false, "displayOrder": 3}
+          ]
+        }
+      ]
+    },
+    {
+      "lessonKey": "GWDB-L02",
+      "title": "Database Fundamentals",
+      "summary": "Learn tables, fields, rows, keys and relationships using GWDB examples.",
+      "durationMinutes": 10,
+      "displayOrder": 2,
+      "status": "Published",
+      "evidenceStatus": "DOCUMENTED",
+      "objectives": ["Describe tables, fields and rows.", "Understand a one-to-many relationship.", "Recognise identification data."],
+      "contentMarkdown": "# Database Fundamentals\n\nA **table** contains rows with the same field structure. A **field** stores one item of information. A **row** combines fields into one record.\n\nFor example, a Strata Log row contains Registered Number, Record, Top of Strata, Bottom of Strata and Description.\n\nGWDB commonly identifies records using Registered Number, Pipe, Date and Record.",
+      "sources": [{"documentKey": "GWDB-DATA-DICTIONARY-2024", "pageFrom": 21, "pageTo": 23, "sectionName": "GWDB Structure and Concepts", "evidenceStatus": "DOCUMENTED"}],
+      "questions": []
+    },
+    {
+      "lessonKey": "GWDB-L03",
+      "title": "Registered Number (RN)",
+      "summary": "Learn how RN uniquely identifies a facility and connects records across GWDB tables.",
+      "durationMinutes": 10,
+      "displayOrder": 3,
+      "status": "Published",
+      "evidenceStatus": "DOCUMENTED",
+      "objectives": ["Explain RN purpose.", "Understand RN relationships.", "Recognise replacement-bore links."],
+      "contentMarkdown": "# Registered Number (RN)\n\nThe **Registered Number**, commonly called the **RN**, is the most important identifier in the Groundwater Database.\n\n## 1. What is an RN?\n\nEvery facility in GWDB is assigned a Registered Number. A facility could be a production bore, monitoring bore, test bore, proposed bore, surface-water facility or another facility for which information must be recorded.\n\nExample: `Registered Number: 123456`\n\nThe RN's purpose is to uniquely identify the facility.\n\n## 2. Where is the RN created?\n\nThe facility's main record is stored in the **Registration table**. The data dictionary states that a Registration record must exist before information can be stored in another GWDB subject table.\n\n| Registered Number | Facility Type | Status | Office |\n|---|---|---|---|\n| 123456 | Sub-artesian Facility | Existing | Brisbane |\n\n## 3. How does RN connect the tables?\n\nThe same RN is recorded in subject tables containing information about the facility.\n\n```mermaid\nflowchart TD\n    R[Registration - RN 123456]\n    C[Casing - RN 123456]\n    S[Strata Log - RN 123456]\n    A[Aquifer - RN 123456]\n    W[Water Level - RN 123456]\n    Q[Water Analysis - RN 123456]\n    I[Images - RN 123456]\n    R --> C\n    R --> S\n    R --> A\n    R --> W\n    R --> Q\n    R --> I\n```\n\nThis allows GWDB to assemble the facility's construction, geology, monitoring, water-quality and document history.\n\n## 4. RN is a business key\n\nRN identifies a real facility and is understood by groundwater staff. It is therefore a **business key**. This differs from a technical identifier such as a generated UUID that may only have meaning inside an application.\n\nIn the existing GWDB, RN is the central business identifier. The physical Oracle datatype and constraints must be verified from database metadata.\n\n## 5. Is RN enough to identify every row?\n\nNo. RN identifies the facility, but a facility can have many related records.\n\n| RN | Pipe | Date | Measurement |\n|---|---|---|---:|\n| 123456 | A | 01/08/2026 | -14.3 m |\n| 123456 | A | 02/08/2026 | -14.5 m |\n| 123456 | A | 03/08/2026 | -14.4 m |\n\nAll three measurements belong to the same facility. A particular Water Level row may require a combination such as `RN + Pipe + Date + Time`. Therefore RN identifies the facility while additional fields identify a child record.\n\n## 6. RN creates one-to-many relationships\n\nOne Registration row can be associated with many Casing, Aquifer, Water Level, Water Analysis and Image rows.\n\n| Parent | Child | Logical cardinality |\n|---|---|---|\n| Registration | Casing | One-to-many |\n| Registration | Aquifer | One-to-many |\n| Registration | Water Level | One-to-many |\n| Registration | Water Analysis | One-to-many |\n| Registration | Images | One-to-many |\n\nThe logical relationship is documented through RN usage. Whether Oracle enforces each relationship with a physical foreign-key constraint remains to be verified.\n\n## 7. RN and multiple pipes\n\nOne registered facility can have multiple pipes.\n\n| Registered Number | Pipe |\n|---|---|\n| 123456 | A |\n| 123456 | B |\n| 123456 | C |\n\nThe RN identifies the facility, while Pipe distinguishes an individual pipe within it. Pipe `A` represents a single pipe or the deepest pipe; later letters identify additional pipes according to the documented depth convention.\n\n## 8. RN of a bore replaced\n\nRegistration contains the field **RN of Bore Replaced**. This allows a new facility record to refer to the bore it replaced.\n\n| New RN | RN of Bore Replaced |\n|---|---|\n| 234567 | 123456 |\n\nThis is logically a self-referencing relationship from Registration back to Registration. The physical Oracle constraint must be verified.\n\n```mermaid\nflowchart LR\n    NEW[Replacement bore - RN 234567]\n    OLD[Old bore - RN 123456]\n    NEW -->|RN of Bore Replaced| OLD\n```\n\n## 9. Investigation-bore numbering convention\n\nThe data dictionary states that eight- and nine-digit numbers may be allocated to departmental investigation bores. For these numbers, the first four digits represent the surface-water drainage basin and sub-basin.\n\nThis means some RNs may contain historical or geographic meaning. Do not assume that every RN follows the same format until production data has been profiled.\n\n## 10. RN data-quality and schema checks\n\nWhen Oracle access is available, verify:\n\n- RN uniqueness in Registration.\n- The Oracle datatype, length and formatting of RN.\n- Whether leading zeros are possible or significant.\n- Minimum and maximum RN lengths and values.\n- Duplicate Registration records.\n- Subject-table RNs missing from Registration.\n- Physical foreign-key constraints.\n- Validity of RN of Bore Replaced values.\n- Whether RNs can be changed, reused or retired.\n- How RNs are generated, allocated or reserved.\n- Whether sequences, Forms routines or PL/SQL allocate RNs.\n\n## 11. Documented versus inferred\n\n| Statement | Evidence status |\n|---|---|\n| Every facility is assigned an RN | Documented |\n| RN uniquely identifies a facility | Documented |\n| RN is common to GWDB tables | Documented |\n| Registration must exist before other subject data | Documented |\n| Registration to Water Level is logically one-to-many | Inferred from documented structure |\n| Oracle contains a physical foreign key for the relationship | Not yet verified |\n| RN is generated using an Oracle sequence | Unknown |\n\nA logical relationship may exist even when the database does not enforce it through a physical foreign-key constraint.\n\n## Lesson summary\n\n1. RN uniquely identifies a GWDB facility.\n2. Registration is the facility's central record.\n3. The same RN connects related subject-table records.\n4. RN identifies the facility but does not uniquely identify every child row.\n5. Pipe, Date and Record help identify individual related records.\n6. Replacement bores can logically reference an earlier RN.\n7. Oracle metadata is required to confirm physical keys and constraints.",
+      "keyTakeaways": [
+        "RN uniquely identifies a GWDB facility.",
+        "Registration is the facility's central record.",
+        "RN connects related subject-table records.",
+        "RN alone does not uniquely identify every child row.",
+        "Pipe, Date and Record help identify individual related records.",
+        "RN of Bore Replaced creates a logical self-reference between Registration records."
+      ],
+      "verificationChecks": [
+        "Confirm RN uniqueness in Registration.",
+        "Confirm the Oracle datatype, length and leading-zero behaviour.",
+        "Identify subject-table RNs missing from Registration.",
+        "Confirm physical foreign keys and indexes using Oracle metadata.",
+        "Determine how RNs are generated, allocated, reserved and retired.",
+        "Confirm whether RN of Bore Replaced is physically constrained."
+      ],
+      "sources": [{"documentKey": "GWDB-DATA-DICTIONARY-2024", "pageFrom": 21, "pageTo": 22, "sectionName": "Registered Number", "evidenceStatus": "DOCUMENTED"}],
+      "questions": [
+        {
+          "questionKey": "GWDB-L03-Q01",
+          "questionText": "What is the main purpose of the Registered Number?",
+          "explanation": "RN uniquely identifies a facility and connects its records across GWDB tables.",
+          "displayOrder": 1,
+          "options": [
+            {"optionKey": "A", "text": "Identify the user who entered a record", "isCorrect": false, "displayOrder": 1},
+            {"optionKey": "B", "text": "Uniquely identify a facility", "isCorrect": true, "displayOrder": 2},
+            {"optionKey": "C", "text": "Identify a database server", "isCorrect": false, "displayOrder": 3}
+          ]
+        }
+      ]
+    },
+    {
+      "lessonKey": "GWDB-L04",
+      "title": "Pipe, Date and Record",
+      "summary": "Understand the additional identifiers used when a facility has multiple pipes or repeated records.",
+      "durationMinutes": 12,
+      "displayOrder": 4,
+      "status": "Published",
+      "evidenceStatus": "DOCUMENTED",
+      "objectives": ["Explain Pipe values.", "Understand the purpose of Date and Record.", "Recognise composite identification."],
+      "contentMarkdown": "# Pipe, Date and Record\n\nRN identifies the facility, but one facility can contain several pipes and many observations. GWDB therefore also uses **Pipe**, **Date** and **Record**.\n\n- `A` represents a single pipe or the deepest pipe.\n- `B`, `C` and later letters represent additional pipes.\n- `X` represents a borehole before completion or material not directly related to a pipe.\n- Date distinguishes observations over time.\n- Record distinguishes repeated rows sharing other identifiers.",
+      "sources": [{"documentKey": "GWDB-DATA-DICTIONARY-2024", "pageFrom": 21, "pageTo": 23, "sectionName": "Identification Data; Pipes; Date; Record", "evidenceStatus": "DOCUMENTED"}],
+      "questions": []
+    },
+    {
+      "lessonKey": "GWDB-L05",
+      "title": "Registration Table",
+      "summary": "Explore the central facility table, location fields, status, ownership and confidentiality.",
+      "durationMinutes": 15,
+      "displayOrder": 5,
+      "status": "Published",
+      "evidenceStatus": "DOCUMENTED",
+      "objectives": ["Describe Registration purpose.", "Identify major attribute groups.", "Recognise compulsory and controlled fields."],
+      "contentMarkdown": "# Registration Table\n\nRegistration is the central facility table. It records identity, office, file references, facility type and status, geographic location, drilling information, map references, ownership, confidentiality, property and replacement relationships.\n\nThe data dictionary identifies Office, Facility Type and Facility Status as compulsory fields. Log Received Date cannot be before Drilled Date.",
+      "sources": [{"documentKey": "GWDB-DATA-DICTIONARY-2024", "pageFrom": 25, "pageTo": 36, "sectionName": "Registration Table", "evidenceStatus": "DOCUMENTED"}],
+      "questions": []
+    },
+    {
+      "lessonKey": "GWDB-L06",
+      "title": "Construction and Casing",
+      "summary": "Learn how casing and construction materials are recorded as depth intervals.",
+      "durationMinutes": 15,
+      "displayOrder": 6,
+      "status": "Published",
+      "evidenceStatus": "DOCUMENTED",
+      "objectives": ["Explain a casing interval.", "Understand top and bottom depths.", "Recognise Pipe X usage."],
+      "contentMarkdown": "# Construction and Casing\n\nThe Casing table stores materials associated with bore construction. A logical row is identified using RN, Pipe, Date and Record and includes material description, size, outside diameter, top and bottom depth.\n\nPipe `X` can be used for grout, gravel pack or other material not directly related to a completed pipe.",
+      "sources": [{"documentKey": "GWDB-DATA-DICTIONARY-2024", "pageFrom": 37, "pageTo": 44, "sectionName": "Casing Table", "evidenceStatus": "DOCUMENTED"}],
+      "questions": []
+    },
+    {
+      "lessonKey": "GWDB-L07",
+      "title": "Strata, Aquifers and Lithology",
+      "summary": "Understand geological intervals, water-bearing formations and lithology records.",
+      "durationMinutes": 15,
+      "displayOrder": 7,
+      "status": "Published",
+      "evidenceStatus": "DOCUMENTED",
+      "objectives": ["Differentiate strata and aquifers.", "Understand depth intervals.", "Recognise formation and lithology references."],
+      "contentMarkdown": "# Strata, Aquifers and Lithology\n\nThe Strata Log table describes geological layers using top depth, bottom depth and description. The Aquifer table records water-bearing intervals and related properties such as standing water level when drilled, flow, quality, yield, condition and formation.\n\nThe logical connection between Aquifer and Lithologies using RN and Record is inferred and must be verified from Oracle metadata.",
+      "sources": [{"documentKey": "GWDB-DATA-DICTIONARY-2024", "pageFrom": 45, "pageTo": 48, "sectionName": "Strata Log Table; Aquifer Table", "evidenceStatus": "DOCUMENTED"}],
+      "questions": []
+    },
+    {
+      "lessonKey": "GWDB-L08",
+      "title": "Water Levels and Bore Logger Data",
+      "summary": "Compare manual or derived water-level observations with logger-derived data.",
+      "durationMinutes": 15,
+      "displayOrder": 8,
+      "status": "Published",
+      "evidenceStatus": "DOCUMENTED",
+      "objectives": ["Interpret a water-level measurement.", "Understand measurement points.", "Compare Water Level and Bore Logger Data."],
+      "contentMarkdown": "# Water Levels and Bore Logger Data\n\nThe Water Level table stores measurements from a recorded measuring point. Measurements are stored in metres. Values above the measurement point are positive and values below it are negative.\n\nBore Logger Data stores logger-derived observations and repeats much of the context used by Water Level. The lineage and deduplication behaviour must be confirmed from system processes.",
+      "sources": [{"documentKey": "GWDB-DATA-DICTIONARY-2024", "pageFrom": 75, "pageTo": 87, "sectionName": "Water Level Table; Bore Logger Data Table", "evidenceStatus": "DOCUMENTED"}],
+      "questions": []
+    },
+    {
+      "lessonKey": "GWDB-L09",
+      "title": "Pumping Tests and Flow Readings",
+      "summary": "Learn the pump-test header, test types and time-series reading structure.",
+      "durationMinutes": 15,
+      "displayOrder": 9,
+      "status": "Published",
+      "evidenceStatus": "INFERRED",
+      "objectives": ["Identify pump-test setup fields.", "Understand test readings.", "Recognise the likely header-detail relationship."],
+      "contentMarkdown": "# Pumping Tests and Flow Readings\n\nPumping Test and Design records test setup and summary information. Pump Test Types records ordered test types. Flow and Pump Test Readings stores time, discharge, back pressure or drawdown, temperature and comments.\n\nThe likely header-detail relationship uses RN, Pipe, Date and Record, but the exact Oracle primary and foreign keys require schema verification.",
+      "sources": [{"documentKey": "GWDB-DATA-DICTIONARY-2024", "pageFrom": 54, "pageTo": 69, "sectionName": "Pumping Test and Design; Flow and Pump Test Readings", "evidenceStatus": "DOCUMENTED"}],
+      "questions": []
+    },
+    {
+      "lessonKey": "GWDB-L10",
+      "title": "Water Quality and Laboratory Analysis",
+      "summary": "Understand field measurements, standard analyses and variable-based special analyses.",
+      "durationMinutes": 18,
+      "displayOrder": 10,
+      "status": "Published",
+      "evidenceStatus": "DOCUMENTED",
+      "objectives": ["Differentiate field and laboratory data.", "Compare standard and special analyses.", "Understand variable-based results."],
+      "contentMarkdown": "# Water Quality and Laboratory Analysis\n\nGWDB stores field measurements such as conductivity, pH, temperature and dissolved oxygen. The standard Water Analysis table uses fixed chemical columns. Special Water Analysis separates sample and bottle context from variable-based results.\n\nWater Quality Variables defines names, units, limits, accuracy and precision for variable-based results.",
+      "sources": [{"documentKey": "GWDB-DATA-DICTIONARY-2024", "pageFrom": 88, "pageTo": 104, "sectionName": "Water Quality Tables", "evidenceStatus": "DOCUMENTED"}],
+      "questions": []
+    },
+    {
+      "lessonKey": "GWDB-L11",
+      "title": "Drillers, Notices and Drill Logs",
+      "summary": "Explore driller licensing, notices, trainees and drill-log receivals.",
+      "durationMinutes": 12,
+      "displayOrder": 11,
+      "status": "Published",
+      "evidenceStatus": "DOCUMENTED",
+      "objectives": ["Describe driller records.", "Understand notices and receivals.", "Recognise RN linkage to drilling administration."],
+      "contentMarkdown": "# Drillers, Notices and Drill Logs\n\nDriller records include licence, status, class, methods, restrictions, contact and office details. Drill Notices and Drill Log Receivals record drilling activities and workflow information. Driller Trainees links trainees to a driller licence context.\n\nThe physical relationships use licence identifiers and require Oracle constraint verification.",
+      "sources": [{"documentKey": "GWDB-DATA-DICTIONARY-2024", "pageFrom": 107, "pageTo": 115, "sectionName": "Drilling Administration Tables", "evidenceStatus": "DOCUMENTED"}],
+      "questions": []
+    },
+    {
+      "lessonKey": "GWDB-L12",
+      "title": "Oracle Forms, PL/SQL and Integrations",
+      "summary": "Understand how the existing user interface, database programs, reporting and public-data channels fit together.",
+      "durationMinutes": 20,
+      "displayOrder": 12,
+      "status": "Draft",
+      "evidenceStatus": "INFERRED",
+      "objectives": ["Describe the documented platform.", "Recognise where business rules may be implemented.", "Identify discovery information still required."],
+      "contentMarkdown": "# Oracle Forms, PL/SQL and Integrations\n\nThe data dictionary describes an Oracle relational database running on Solaris and Oracle Forms running in a Microsoft Windows Server environment. District offices access the centrally located database through the departmental intranet.\n\nBusiness rules may exist in Forms triggers, PL/SQL, database constraints and operational procedures. Schema, Forms source and integration access are required before those implementation details can be marked schema verified.",
+      "sources": [{"documentKey": "GWDB-DATA-DICTIONARY-2024", "pageFrom": 19, "pageTo": 20, "sectionName": "Database System", "evidenceStatus": "DOCUMENTED"}],
+      "questions": []
+    }
+  ],
+  "glossary": [
+    {"termKey": "AQUIFER", "term": "Aquifer", "shortDefinition": "A geological formation or interval that contains and transmits groundwater.", "evidenceStatus": "DOCUMENTED", "source": {"documentKey": "GWDB-DATA-DICTIONARY-2024", "page": 46}},
+    {"termKey": "BORE", "term": "Bore", "shortDefinition": "A drilled groundwater facility recorded in GWDB and identified using a Registered Number.", "evidenceStatus": "DOCUMENTED", "source": {"documentKey": "GWDB-DATA-DICTIONARY-2024", "page": 22}},
+    {"termKey": "CASING", "term": "Casing", "shortDefinition": "Material installed in a bore, recorded using material, diameter and depth intervals.", "evidenceStatus": "DOCUMENTED", "source": {"documentKey": "GWDB-DATA-DICTIONARY-2024", "page": 37}},
+    {"termKey": "DATUM", "term": "Datum", "shortDefinition": "The reference system used for location or elevation measurements.", "evidenceStatus": "DOCUMENTED", "source": {"documentKey": "GWDB-DATA-DICTIONARY-2024", "page": 31}},
+    {"termKey": "DRAWDOWN", "term": "Drawdown", "shortDefinition": "The reduction in water level or pressure during a pumping test.", "evidenceStatus": "DOCUMENTED", "source": {"documentKey": "GWDB-DATA-DICTIONARY-2024", "page": 57}},
+    {"termKey": "FACILITY", "term": "Facility", "shortDefinition": "A bore, test facility, surface-water facility or other recordable facility identified by RN.", "evidenceStatus": "DOCUMENTED", "source": {"documentKey": "GWDB-DATA-DICTIONARY-2024", "page": 22}},
+    {"termKey": "LITHOLOGY", "term": "Lithology", "shortDefinition": "The physical character or rock/material type associated with a geological interval.", "evidenceStatus": "DOCUMENTED", "source": {"documentKey": "GWDB-DATA-DICTIONARY-2024", "page": 46}},
+    {"termKey": "MEASUREMENT_POINT", "term": "Measurement Point", "shortDefinition": "The natural surface or reference point from which a water-level measurement is taken.", "evidenceStatus": "DOCUMENTED", "source": {"documentKey": "GWDB-DATA-DICTIONARY-2024", "page": 76}},
+    {"termKey": "PIPE", "term": "Pipe", "shortDefinition": "A letter-based identifier distinguishing bore pipes or no-pipe contexts within one RN.", "evidenceStatus": "DOCUMENTED", "source": {"documentKey": "GWDB-DATA-DICTIONARY-2024", "page": 22}},
+    {"termKey": "RN", "term": "Registered Number", "shortDefinition": "The identifier that uniquely identifies a facility and connects its GWDB records.", "evidenceStatus": "DOCUMENTED", "source": {"documentKey": "GWDB-DATA-DICTIONARY-2024", "page": 22}},
+    {"termKey": "STANDING_WATER_LEVEL", "term": "Standing Water Level", "shortDefinition": "The water level under non-pumping or specified observation conditions.", "evidenceStatus": "DOCUMENTED", "source": {"documentKey": "GWDB-DATA-DICTIONARY-2024", "page": 47}},
+    {"termKey": "STRATA", "term": "Strata", "shortDefinition": "Geological layers recorded using top depth, bottom depth and description.", "evidenceStatus": "DOCUMENTED", "source": {"documentKey": "GWDB-DATA-DICTIONARY-2024", "page": 45}},
+    {"termKey": "YIELD", "term": "Yield", "shortDefinition": "The rate or amount of water obtained from an aquifer or bore under defined conditions.", "evidenceStatus": "DOCUMENTED", "source": {"documentKey": "GWDB-DATA-DICTIONARY-2024", "page": 47}}
+  ],
+  "dataModel": {
+    "tables": [
+      {"tableKey": "REGISTRATION", "name": "Registration", "domain": "Core Registry", "grain": "One row per facility/RN", "candidateKey": ["Registered Number"], "evidenceStatus": "DOCUMENTED"},
+      {"tableKey": "CASING", "name": "Casing", "domain": "Construction", "grain": "One material interval per RN, Pipe, Date and Record", "candidateKey": ["Registered Number", "Pipe", "Date", "Record"], "evidenceStatus": "INFERRED"},
+      {"tableKey": "AQUIFER", "name": "Aquifer", "domain": "Geoscience", "grain": "One aquifer interval per RN and Record", "candidateKey": ["Registered Number", "Record"], "evidenceStatus": "INFERRED"},
+      {"tableKey": "WATER_LEVEL", "name": "Water Level", "domain": "Monitoring", "grain": "One recorded water-level observation", "candidateKey": ["Registered Number", "Pipe", "Date", "Time"], "evidenceStatus": "INFERRED"},
+      {"tableKey": "WATER_ANALYSIS", "name": "Water Analysis", "domain": "Water Quality", "grain": "One standard analysis record", "candidateKey": ["Registered Number", "Pipe", "Date", "Record"], "evidenceStatus": "INFERRED"}
+    ],
+    "relationships": [
+      {"relationshipKey": "REGISTRATION-CASING", "fromTableKey": "REGISTRATION", "toTableKey": "CASING", "fields": [{"from": "Registered Number", "to": "Registered Number"}], "cardinality": "one-to-many", "evidenceStatus": "INFERRED"},
+      {"relationshipKey": "REGISTRATION-AQUIFER", "fromTableKey": "REGISTRATION", "toTableKey": "AQUIFER", "fields": [{"from": "Registered Number", "to": "Registered Number"}], "cardinality": "one-to-many", "evidenceStatus": "INFERRED"},
+      {"relationshipKey": "REGISTRATION-WATER-LEVEL", "fromTableKey": "REGISTRATION", "toTableKey": "WATER_LEVEL", "fields": [{"from": "Registered Number", "to": "Registered Number"}], "cardinality": "one-to-many", "evidenceStatus": "INFERRED"},
+      {"relationshipKey": "REGISTRATION-WATER-ANALYSIS", "fromTableKey": "REGISTRATION", "toTableKey": "WATER_ANALYSIS", "fields": [{"from": "Registered Number", "to": "Registered Number"}], "cardinality": "one-to-many", "evidenceStatus": "INFERRED"}
+    ]
+  },
+  "importSettings": {
+    "validateOnly": false,
+    "publishLessons": false,
+    "overwriteUserProgress": false,
+    "overwritePersonalNotes": false,
+    "allowEvidenceDowngrade": false,
+    "onDuplicate": "update-by-stable-key",
+    "onMissingReference": "reject-item",
+    "transactionMode": "all-or-nothing"
+  }
+}

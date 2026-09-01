@@ -36,6 +36,7 @@
   <ItemGroup>
     <Content Include="..\systemscope-web\dist\**" Link="wwwroot\%(RecursiveDir)%(Filename)%(Extension)" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="database\migrations\**\*.sql" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\..\docs\feature\gwdb\2. Learn_GWDB_Import_Package.json" Link="learning\Learn_GWDB_Import_Package.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>
