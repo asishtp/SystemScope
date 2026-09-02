@@ -176,7 +176,7 @@ function Dashboard({ data, onOpenLesson, onNavigate }: { data: LearningDashboard
             <h3>Learning Path</h3>
             <div className="learn-lessons">
               {data.lessons.map(lesson => (
-                <button key={lesson.lessonKey} className={`learn-lesson${lesson.status === 'InProgress' ? ' active' : ''}`} type="button" onClick={() => onOpenLesson(lesson.lessonKey)}>
+                <button key={lesson.lessonKey} className={`learn-lesson${lesson.lessonKey === next?.lessonKey ? ' active' : ''}${lesson.status === 'Completed' ? ' completed' : ''}`} type="button" onClick={() => onOpenLesson(lesson.lessonKey)}>
                   <span className="learn-num">{lesson.displayOrder}</span>
                   <span>
                     <b>{lessonDisplay(lesson.lessonKey, lesson.title)}</b>
