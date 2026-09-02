@@ -4,6 +4,7 @@ import { LessonReader } from './LessonReader';
 import { lessonDisplay, screenByKey, screenPackage } from './screenData';
 import { evidenceName, progressLabel, type DataTable, type GlossaryTerm, type LearningDashboard, type LearnPage, type Relationship, type SearchHit } from './types';
 import './learn.css';
+import { SchemaExplorer } from '../schema/SchemaExplorer';
 
 const NAV: { id: string; label: string; icon: ReactNode; action: 'overview' | 'architecture' | 'applications' | 'database' | 'integrations' | 'processes' | 'documentation' | 'learn' }[] = [
   { id: 'overview', label: 'Overview', action: 'overview', icon: <IconHome /> },
@@ -72,7 +73,7 @@ export function LearnGwdbPage({
     else if (action === 'documentation') onOpenDocuments(catalogKey);
     else if (action === 'architecture') onOpenAssessment(catalogKey, 'architecture');
     else if (action === 'applications') onOpenAssessment(catalogKey);
-    else if (action === 'database') onOpenAssessment(catalogKey, 'database');
+    else if (action === 'database') onNavigate('schema');
     else if (action === 'integrations') onOpenAssessment(catalogKey, 'integrations');
     else if (action === 'processes') onOpenAssessment(catalogKey, 'operations');
   };
@@ -113,7 +114,7 @@ export function LearnGwdbPage({
       <div className="learn-body">
         <div className={`learn-sidenav${navOpen ? ' open' : ''}`}>
           {NAV.map(item => (
-            <button key={item.id} type="button" className={item.action === 'learn' ? 'active' : ''} onClick={() => goNav(item.action)}>
+            <button key={item.id} type="button" className={current === 'schema' ? (item.action === 'database' ? 'active' : '') : (item.action === 'learn' ? 'active' : '')} onClick={() => goNav(item.action)}>
               {item.icon}{item.label}
             </button>
           ))}
@@ -130,6 +131,7 @@ export function LearnGwdbPage({
           {!error && current === 'bookmarks' && <BookmarksView catalogKey={catalogKey} onOpenLesson={key => onNavigate('lessons', key)} onBack={() => onNavigate()} />}
           {!error && current === 'notes' && <NotesView catalogKey={catalogKey} onBack={() => onNavigate()} />}
           {!error && current === 'import' && <ImportView catalogKey={catalogKey} onImported={load} onBack={() => onNavigate()} />}
+          {!error && current === 'schema' && <SchemaExplorer onBack={() => onNavigate()} />}
         </div>
       </div>
     </div>

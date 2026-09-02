@@ -93,7 +93,7 @@ export type SearchHit = {
   evidenceStatus?: string;
 };
 
-export type LearnPage = 'dashboard' | 'lessons' | 'glossary' | 'bookmarks' | 'notes' | 'data-model' | 'tables' | 'import';
+export type LearnPage = 'dashboard' | 'lessons' | 'glossary' | 'bookmarks' | 'notes' | 'data-model' | 'tables' | 'import' | 'schema';
 
 export function progressLabel(status: string) {
   if (status === 'Completed') return 'Completed';
