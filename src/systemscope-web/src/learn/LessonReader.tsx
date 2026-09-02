@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useState } from 'react';
 import { api } from '../landscape/api';
 import { LessonBody } from './LessonBodies';
 import { screenByKey } from './screenData';
@@ -27,11 +27,34 @@ export function LessonReader({
   const [active, setActive] = useState(1);
   const screen = screenByKey(lessonKey);
 
+  useLayoutEffect(() => {
+    const main = document.querySelector<HTMLElement>('.learn-main');
+    if (main) main.scrollTop = 0;
+  }, [lessonKey]);
+
   const load = () => api<LessonDetail>(`/learning/lessons/${encodeURIComponent(lessonKey)}`)
     .then(setLesson)
     .catch(e => setError(e.message));
 
-  useEffect(() => { setError(''); setLesson(undefined); setShowNotes(false); setActive(1); load(); }, [lessonKey]);
+  useEffect(() => {
+    setError('');
+    setLesson(undefined);
+    setShowNotes(false);
+    setActive(1);
+    document.querySelector<HTMLElement>('.learn-main')?.scrollTo({ top: 0, left: 0 });
+    load();
+  }, [lessonKey]);
+  useEffect(() => {
+    if (!lesson) return;
+    const reset = () => {
+      const main = document.querySelector<HTMLElement>('.learn-main');
+      if (main) { main.scrollTop = 0; main.scrollLeft = 0; }
+    };
+    reset();
+    const frame = window.requestAnimationFrame(reset);
+    const timer = window.setTimeout(reset, 250);
+    return () => { window.cancelAnimationFrame(frame); window.clearTimeout(timer); };
+  }, [lesson?.id]);
 
   if (error) return <div className="learn-empty"><p>{error}</p><button className="learn-secondary" onClick={onBack}>Back to path</button></div>;
   if (!lesson || !screen) return <div className="learn-empty">{lesson ? 'Lesson screen data not found.' : 'Loading lesson…'}</div>;
@@ -57,6 +80,7 @@ export function LessonReader({
     <>
       <div className={`learn-reader lesson-${screen.number}`}>
         <article className="learn-reader-main">
+          <header className="learn-lesson-head">
           <p className="learn-kicker-blue">LESSON {screen.number} OF {total}</p>
           <h2 className="learn-lesson-title">{screen.title}</h2>
           <p className="learn-lesson-summary">{screen.subtitle}</p>
@@ -70,6 +94,7 @@ export function LessonReader({
               <div className="learn-bar"><i style={{ width: `${pct}%` }} /></div>
             </div>
           </div>
+          </header>
           <LessonBody lesson={screen} />
         </article>
         <aside>

@@ -257,15 +257,18 @@
           "type": "hubDiagram",
           "hub": "Registration · RN 123456",
           "items": [
+            "Casing",
+            "Aquifer",
             "Water Analysis",
-            "Images",
-            "Water Level"
+            "Water Level",
+            "Images"
           ]
         },
         {
           "number": 3,
           "title": "RN is a business key",
           "type": "comparison",
+          "text": "RN is the stable business identifier understood by groundwater staff and used across systems. Technical keys are internal to applications and not meaningful to users.",
           "items": [
             {
               "title": "Business key",
@@ -713,6 +716,12 @@
                   "0",
                   "15",
                   "Clay"
+                ],
+                [
+                  "2",
+                  "15",
+                  "45",
+                  "Sandstone"
                 ],
                 [
                   "3",

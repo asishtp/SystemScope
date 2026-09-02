@@ -2,6 +2,7 @@ import { BoreArt, BottleArt, FlaskArt, GeneratedArt, Info, PillRow, ReportArt, S
 import { itemDetail, itemTitle, type ScreenLesson, type ScreenSection } from './screenData';
 
 export function LessonBody({ lesson }: { lesson: ScreenLesson }) {
+  if (lesson.number === 6) return <LessonSixBody lesson={lesson} />;
   return (
     <>
       {lesson.sections.map(section => (
@@ -10,6 +11,42 @@ export function LessonBody({ lesson }: { lesson: ScreenLesson }) {
         </Section>
       ))}
       {lesson.completionBanner && <div className="lv-complete">{lesson.completionBanner}</div>}
+    </>
+  );
+}
+
+function LessonSixBody({ lesson }: { lesson: ScreenLesson }) {
+  const depth = lesson.sections[0];
+  const attributes = lesson.sections[1];
+  const record = lesson.sections[2];
+  return (
+    <>
+      <Section n={1} title={depth.title}>
+        <div className="lv-casing-combined">
+          <Depth section={depth} />
+          <article className="lv-casing-record">
+            <h4>Casing record</h4>
+            <p className="identifier">{record.identifier}</p>
+            <dl>
+              <div><dt>Registered Number</dt><dd>123456</dd></div>
+              <div><dt>Pipe</dt><dd>A</dd></div>
+              <div><dt>Date</dt><dd>14/05/2024</dd></div>
+              <div><dt>Record</dt><dd>1, 2, 3</dd></div>
+              <div><dt>Description</dt><dd>{record.description}</dd></div>
+            </dl>
+          </article>
+        </div>
+      </Section>
+      <Section n={2} title={attributes.title}>
+        <div className="lv-attributes-combined">
+          <TableSection section={attributes} />
+          <aside className="lv-warn-card">
+            <b><i aria-hidden="true">i</i> Pipe X</b>
+            <p>{record.pipeX}</p>
+            <PillRow items={record.examples ?? []} />
+          </aside>
+        </div>
+      </Section>
     </>
   );
 }
@@ -69,21 +106,23 @@ function Hub({ section }: { section: ScreenSection }) {
     return (
       <>
         <div className="lv-project-hub">
-          {items.slice(0, 2).map(i => <article key={itemTitle(i)}><b>{itemTitle(i)}</b><small>{itemDetail(i)}</small></article>)}
-          <div className="folder">{hub}</div>
-          {items.slice(2, 4).map(i => <article key={itemTitle(i)}><b>{itemTitle(i)}</b><small>{itemDetail(i)}</small></article>)}
+          <svg className="lv-project-links" viewBox="0 0 820 176" preserveAspectRatio="none" aria-hidden="true"><path d="M250 43h42l58 45M250 133h42l58-45M570 43h-42l-58 45M570 133h-42l-58-45" /><circle cx="350" cy="88" r="5" /><circle cx="470" cy="88" r="5" /></svg>
+          {items.slice(0, 2).map(i => <article key={itemTitle(i)}><ProjectContextIcon title={itemTitle(i)} /><span><b>{itemTitle(i)}</b><small>{itemDetail(i)}</small></span></article>)}
+          <div className="folder"><i aria-hidden="true" />{hub}</div>
+          {items.slice(2, 4).map(i => <article key={itemTitle(i)}><ProjectContextIcon title={itemTitle(i)} /><span><b>{itemTitle(i)}</b><small>{itemDetail(i)}</small></span></article>)}
         </div>
         {section.info && <Info>{section.info}</Info>}
       </>
     );
   }
-  if (registration && items.length >= 4) {
+  if (registration && /primary/i.test(hub) && items.length >= 4) {
     return (
       <>
         {section.info && <p>{section.info}</p>}
         <div className="lv-reg-hub">
-          <div className="head">{hub.split('·')[0].trim()}<small>{hub.includes('·') ? hub.slice(hub.indexOf('·') + 1).trim() : ''}</small></div>
-          <div className="kids">{items.map(i => <div key={itemTitle(i)}>{itemTitle(i)}<small>RN</small></div>)}</div>
+          <div className="head"><RegistrationDbIcon /><span>{hub.split('·')[0].trim()}<small>{hub.includes('·') ? hub.slice(hub.indexOf('·') + 1).trim() : ''}</small></span></div>
+          <svg className="links" viewBox="0 0 900 95" preserveAspectRatio="none" aria-hidden="true"><path d="M450 0v24H75v24M450 24H263v24M450 24v24M450 24h187v24M450 24h375v24" /></svg>
+          <div className="kids">{items.map(i => <div key={itemTitle(i)}><HubIcon title={itemTitle(i)} /><b>{itemTitle(i)}</b><small>RN</small></div>)}</div>
         </div>
       </>
     );
@@ -91,13 +130,44 @@ function Hub({ section }: { section: ScreenSection }) {
   return (
     <>
       <div className="lv-hub">
-        <div className="core">{hub.includes('·') ? <>{hub.split('·')[0]}<br /><small>{hub.slice(hub.indexOf('·') + 1)}</small></> : hub}</div>
-        {items.map((item, i) => <div className={`sat ${['tl', 'top', 'tr', 'bl', 'br'][i] || 'tr'}`} key={itemTitle(item)}>{itemTitle(item)}</div>)}
+        {items.length === 5 && <svg className="lv-hub-links" viewBox="0 0 800 260" preserveAspectRatio="none" aria-hidden="true">
+          <line x1="400" y1="143" x2="64" y2="70" /><line x1="400" y1="143" x2="400" y2="21" />
+          <line x1="400" y1="143" x2="704" y2="70" /><line x1="400" y1="143" x2="64" y2="198" />
+          <line x1="400" y1="143" x2="704" y2="198" />
+        </svg>}
+        <div className="core"><HubCoreIcon /><span>{hub.includes('·') ? <>{hub.split('·')[0]}<small>· {hub.slice(hub.indexOf('·') + 1).trim()}</small></> : hub}</span></div>
+        {items.map((item, i) => <div className={`sat ${['tl', 'top', 'tr', 'bl', 'br'][i] || 'tr'}`} key={itemTitle(item)}><HubIcon title={itemTitle(item)} />{itemTitle(item)}</div>)}
         {items.map((_, i) => <span className={`rn ${['a', 'b', 'c', 'd', 'e'][i]}`} key={i}>RN</span>)}
       </div>
       {section.info && <Info>{section.info}</Info>}
     </>
   );
+}
+
+function ProjectContextIcon({ title }: { title: string }) {
+  const key = title.toLowerCase();
+  if (key.includes('document')) return <svg viewBox="0 0 42 48" aria-hidden="true"><path d="M7 2h20l8 8v36H7Z"/><path d="M27 2v9h8M13 19h16M13 26h16M13 33h16"/></svg>;
+  if (key.includes('monitoring')) return <svg viewBox="0 0 48 48" aria-hidden="true"><rect x="4" y="7" width="40" height="36" rx="3"/><path d="M4 16h40M14 3v8M34 3v8"/><path d="M24 21s-7 9-7 14a7 7 0 0 0 14 0c0-5-7-14-7-14Z"/></svg>;
+  if (key.includes('external')) return <svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="20"/><path d="M4 24h40M24 4c7 7 10 14 10 20s-3 13-10 20M24 4c-7 7-10 14-10 20s3 13 10 20M24 4v40"/></svg>;
+  return <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M4 42V15h40v27M9 15V8h30v7M19 8V3h10v5M20 17v25M28 17v25M7 27h34"/></svg>;
+}
+
+function HubIcon({ title }: { title: string }) {
+  const key = title.toLowerCase();
+  if (key.includes('water analysis')) return <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M11 3h10M13 3v9L6.5 25a3 3 0 0 0 2.7 4h13.6a3 3 0 0 0 2.7-4L19 12V3" /><path d="M10 21h12M12 17h8" /><circle cx="14" cy="24.5" r="1" /></svg>;
+  if (key.includes('image')) return <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="3" y="5" width="26" height="22" rx="2" /><circle cx="22" cy="12" r="2.5" /><path d="m5 24 7-8 5 5 3-3 7 7" /></svg>;
+  if (key.includes('aquifer')) return <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M2 8c4.7-4 9.3 4 14 0s9.3 4 14 0M2 16c4.7-4 9.3 4 14 0s9.3 4 14 0M2 24c4.7-4 9.3 4 14 0s9.3 4 14 0" /></svg>;
+  if (key.includes('strata')) return <svg viewBox="0 0 32 32" aria-hidden="true"><path d="m16 3 13 7-13 7-13-7 13-7Z" /><path d="m3 16 13 7 13-7M3 22l13 7 13-7" /></svg>;
+  if (key.includes('casing')) return <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M12 3h8v26h-8zM8 5h16M8 27h16M16 8v16" /><path d="M10 11h4M18 15h4M10 20h4" /></svg>;
+  return <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2S7 13 7 21a9 9 0 0 0 18 0C25 13 16 2 16 2Z" /><path d="M11 22c1.5 2.5 3.5 3.5 6 3.5" /></svg>;
+}
+
+function HubCoreIcon() {
+  return <svg className="lv-hub-core-icon" viewBox="0 0 32 38" aria-hidden="true"><rect x="4" y="5" width="24" height="30" rx="2" /><path d="M11 5V2h10v3M10 13h12M10 19h12M10 25h8" /><path d="m20 29 2 2 4-5" /></svg>;
+}
+
+function RegistrationDbIcon() {
+  return <svg viewBox="0 0 36 36" aria-hidden="true"><ellipse cx="18" cy="8" rx="11" ry="5" /><path d="M7 8v9c0 3 5 5 11 5s11-2 11-5V8M7 17v9c0 3 5 5 11 5s11-2 11-5v-9" /></svg>;
 }
 
 function EntityIcon({ type }: { type: 'location' | 'monitoring' | 'construction' | 'documents' }) {
@@ -124,9 +194,9 @@ function ConceptFlow({ section }: { section: ScreenSection }) {
 }
 
 function Sequence({ section }: { section: ScreenSection }) {
-  const arts = [<BoreArt key="b" />, <BottleArt key="o" />, <FlaskArt key="f" />, <ReportArt key="r" />];
   const first = itemTitle(section.items?.[0] || '');
   const pictorial = /bore and pipe/i.test(first);
+  const arts = [pictorial ? <GeneratedArt key="b" kind="bore" label="Groundwater bore and pipe cross-section" /> : <BoreArt key="b" />, <BottleArt key="o" />, <FlaskArt key="f" />, <ReportArt key="r" />];
   const steps = /data entry/i.test(first);
   return (
     <>
@@ -134,12 +204,19 @@ function Sequence({ section }: { section: ScreenSection }) {
         {section.items?.map((item, i) => (
           pictorial
             ? <figure key={itemTitle(item)}>{arts[i]}<figcaption><b>{itemTitle(item)}</b><span>{itemDetail(item)}</span></figcaption></figure>
-            : <figure key={itemTitle(item)}><JourneyIcon index={i} /><figcaption><b>{itemTitle(item)}</b><small>{itemDetail(item)}</small></figcaption></figure>
+            : <figure key={itemTitle(item)}>{steps ? <ReportingStageIcon index={i} /> : <JourneyIcon index={i} />}<figcaption><b>{itemTitle(item)}</b><small>{itemDetail(item)}</small></figcaption>{steps && i === 1 && <span className="lv-validation-status" aria-label="Validation can pass or produce a warning"><i>✓</i><i>!</i></span>}</figure>
         ))}
       </div>
       {section.info && <Info>{section.info}</Info>}
     </>
   );
+}
+
+function ReportingStageIcon({ index }: { index: number }) {
+  if (index === 0) return <svg className="lv-reporting-stage-icon" viewBox="0 0 64 64" aria-hidden="true"><path d="M13 5h27l11 11v43H13Z"/><path d="M40 5v13h11M21 26h20M21 34h14M21 42h10"/><path className="accent" d="m35 48 14-14 7 7-14 14-10 3Z"/><path d="m47 36 7 7"/></svg>;
+  if (index === 1) return <svg className="lv-reporting-stage-icon" viewBox="0 0 64 64" aria-hidden="true"><path className="accent-soft" d="M32 4 53 12v17c0 14-8 24-21 31C19 53 11 43 11 29V12Z"/><path d="M32 4 53 12v17c0 14-8 24-21 31C19 53 11 43 11 29V12Z"/><path className="check" d="m21 30 8 8 15-18"/><circle className="status" cx="50" cy="49" r="10"/><path className="status-check" d="m45 49 4 4 7-9"/></svg>;
+  if (index === 2) return <svg className="lv-reporting-stage-icon" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="25"/><path d="M32 14v19l12 8M32 7v5M57 32h-5M32 57v-5M7 32h5"/><circle className="accent" cx="32" cy="32" r="3"/></svg>;
+  return <svg className="lv-reporting-stage-icon" viewBox="0 0 64 64" aria-hidden="true"><path d="M8 57h50M14 55V39h9v16M29 55V27h9v28M44 55V12h9v43"/><path className="accent-soft" d="M15 40h7v14h-7zM30 28h7v26h-7zM45 13h7v41h-7z"/></svg>;
 }
 
 function JourneyIcon({ index }: { index: number }) {
@@ -209,15 +286,19 @@ function Comparison({ section }: { section: ScreenSection }) {
   const withFields = items.some(i => typeof i !== 'string' && i.fields);
   if (withValue) {
     return (
-      <div className="lv-compare">
-        {items.map((item, i) => (
-          <div className={i === 0 ? 'biz' : undefined} key={itemTitle(item)}>
-            <b>{itemTitle(item)}</b>
-            <span>{typeof item === 'string' ? '' : item.value}</span>
-            <span>{itemDetail(item)}</span>
-          </div>
-        ))}
-      </div>
+      <>
+        {section.text && <p>{section.text}</p>}
+        <div className="lv-compare">
+          {items.map((item, i) => (
+            <div className={i === 0 ? 'biz' : undefined} key={itemTitle(item)}>
+              <span className="lv-compare-icon"><KeyRowIcon technical={i === 1} /></span>
+              <b>{itemTitle(item)}</b>
+              <span>{typeof item === 'string' ? '' : item.value}</span>
+              <span>{itemDetail(item)}</span>
+            </div>
+          ))}
+        </div>
+      </>
     );
   }
   if (withFields) {
@@ -228,7 +309,7 @@ function Comparison({ section }: { section: ScreenSection }) {
           {typeof items[0] !== 'string' && items[0].detail && <p>{items[0].detail}</p>}
           <PillRow items={(typeof items[0] !== 'string' ? items[0].fields : undefined) ?? []} />
         </article>
-        <div className="mid">{section.relationship}{section.warning && <Warn>{section.warning}</Warn>}</div>
+        <div className="mid"><span>{section.relationship}</span><i className="lv-compare-arrow" aria-hidden="true">↔</i>{section.warning && <Warn>{section.warning}</Warn>}</div>
         <article className="mint">
           <b>{itemTitle(items[1])}</b>
           {typeof items[1] !== 'string' && items[1].detail && <p>{items[1].detail}</p>}
@@ -251,6 +332,12 @@ function Comparison({ section }: { section: ScreenSection }) {
   );
 }
 
+function KeyRowIcon({ technical }: { technical: boolean }) {
+  return technical
+    ? <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" /><path d="M12 8v2M12 14v2M8 12h2M14 12h2" /></svg>
+    : <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3" /><path d="M6 19a6 6 0 0 1 12 0" /></svg>;
+}
+
 function KeyIcon({ composite }: { composite: boolean }) {
   return (
     <svg className="lv-key-icon" viewBox="0 0 64 64" aria-hidden="true">
@@ -269,7 +356,7 @@ function OneToMany({ section }: { section: ScreenSection }) {
           <b>{section.parent.title}</b>
           <PillRow items={section.parent.fields ?? []} />
         </article>
-        <div className="mid">{section.relationship}{section.warning && <Warn>{section.warning}</Warn>}</div>
+        <div className="mid">{section.relationship}<i className="lv-many-branch" aria-hidden="true"><span /><span /><span /></i>{section.warning && <Warn>{section.warning}</Warn>}</div>
         <article className="mint">
           <b>{section.child.title}</b>
           <PillRow items={section.child.fields ?? []} />
@@ -344,30 +431,49 @@ function Groups({ section }: { section: ScreenSection }) {
   return (
     <div className="lv-groups">
       {section.groups?.map((g, i) => (
-        <article key={g.title}><span className="lv-n">{i + 1}</span><b>{g.title}</b><ul>{g.items.map(item => <li key={item}>{item}</li>)}</ul></article>
+        <article key={g.title}><GroupIcon title={g.title} /><span className="lv-n">{i + 1}</span><b>{g.title}</b><ul>{g.items.map(item => <li key={item}>{item}</li>)}</ul></article>
       ))}
     </div>
   );
 }
 
+function GroupIcon({ title }: { title: string }) {
+  const key = title.toLowerCase();
+  if (key === 'location') return <svg className="lv-group-icon" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 29S6 20 6 12a10 10 0 1 1 20 0c0 8-10 17-10 17Z" /><circle cx="16" cy="12" r="3" /></svg>;
+  if (key === 'classification') return <svg className="lv-group-icon" viewBox="0 0 32 32" aria-hidden="true"><path d="m4 14 10-10h12l2 2v12L18 28 4 14Z" /><circle cx="21" cy="10" r="2" /></svg>;
+  if (key === 'drilling') return <svg className="lv-group-icon" viewBox="0 0 32 32" aria-hidden="true"><path d="M10 4v23M10 5l12 16M5 27h22M20 21v6M7 14h6" /></svg>;
+  if (key === 'administration') return <svg className="lv-group-icon" viewBox="0 0 32 32" aria-hidden="true"><path d="M7 29V8h18v21M12 8V3h8v5M3 29h26M11 13h3M18 13h3M11 18h3M18 18h3M14 29v-6h4v6" /></svg>;
+  if (key === 'governance') return <svg className="lv-group-icon" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3 27 7v8c0 7-4 12-11 15C9 27 5 22 5 15V7l11-4Z" /><path d="M16 8v16" /></svg>;
+  return <svg className="lv-group-icon" viewBox="0 0 32 32" aria-hidden="true"><rect x="3" y="6" width="26" height="20" rx="2" /><circle cx="10" cy="14" r="3" /><path d="M6 22c1-4 7-4 8 0M17 12h8M17 17h8M17 22h6" /></svg>;
+}
+
 function RequiredFields({ section }: { section: ScreenSection }) {
   return (
     <div className="lv-compulsory">
-      {section.items?.map(i => <span key={itemTitle(i)}>✓ {itemTitle(i)}</span>)}
+      {section.items?.map(i => <span key={itemTitle(i)}><i aria-hidden="true">✓</i>{itemTitle(i)}</span>)}
       {section.rule && <em>{section.rule}</em>}
     </div>
   );
 }
 
 function Depth({ section }: { section: ScreenSection }) {
+  const layerHelp: Record<string, { purpose: string; diameter: string }> = {
+    'Steel casing': { purpose: 'Strong outer casing that stabilises and protects the upper bore.', diameter: '150 mm' },
+    'PVC casing': { purpose: 'Non-corrosive inner casing that supports and seals the deeper bore.', diameter: '125 mm' },
+    'Screen': { purpose: 'Slotted intake section that lets groundwater enter while limiting sediment.', diameter: '125 mm' },
+  };
   return (
     <div className="lv-casing">
       <div className="depth">{['0 m', '40 m', '85 m', '100 m'].map(d => <small key={d}>{d}</small>)}</div>
       <GeneratedArt kind="casing" label="Groundwater bore casing and screen construction cross-section" />
+      <div className="lv-depth-guides" aria-hidden="true"><i /><i /><i /><i /></div>
       <div className="layers">
-        {section.intervals?.map(iv => (
-          <p key={iv.material}><b>{iv.material}</b> · {iv.top}–{iv.bottom}<br />Top of Material: {iv.top} · Bottom of Material: {iv.bottom}</p>
-        ))}
+        {section.intervals?.map(iv => {
+          const help = layerHelp[iv.material];
+          return <p className="lv-layer" key={iv.material}>
+            <span className="lv-layer-trigger" tabIndex={0}><b>{iv.material}</b>{help && <span className="lv-layer-tooltip" role="tooltip"><strong>What is {iv.material}?</strong>{help.purpose}<small>Depth: {iv.top}–{iv.bottom} · Outside diameter: {help.diameter}</small></span>}</span> · {iv.top}–{iv.bottom}<br />Top of Material: {iv.top} · Bottom of Material: {iv.bottom}
+          </p>;
+        })}
       </div>
     </div>
   );
@@ -396,18 +502,22 @@ function RecordCard({ section }: { section: ScreenSection }) {
 function Geology({ section }: { section: ScreenSection }) {
   return (
     <div className="lv-strata">
-      <GeneratedArt kind="strata" label="Geological strata and groundwater aquifer cross-section" />
-      <div className="layers">
-        <p>0 m Surface soil</p>
-        <p>0–15 m Clay</p>
-        <p>15–45 m Sandstone</p>
-        <p>45–70 m Aquifer</p>
-        <p>70–100 m Shale</p>
+      <div className="lv-geology-visual">
+        <GeneratedArt kind="strata" label="Geological strata and groundwater aquifer cross-section" />
+        <span className="lv-geology-bore" aria-hidden="true" />
+        <div className="lv-geology-depth" aria-label="Depth in metres">{['0', '15', '45', '70', '100'].map(d => <span key={d}>{d}</span>)}</div>
+        <div className="lv-geology-labels">
+          <GeologyLabel className="surface" depth="0 m" name="Surface soil" detail="The upper organic and unconsolidated ground layer at the land surface." />
+          <GeologyLabel className="clay" depth="0–15 m" name="Clay" detail="Fine-grained, low-permeability material that generally restricts groundwater movement." />
+          <GeologyLabel className="sand" depth="15–45 m" name="Sandstone" detail="Consolidated sand-sized grains that may store or transmit groundwater through pores and fractures." />
+          <GeologyLabel className="aquifer" depth="45–70 m" name="Aquifer · Sand and gravel" detail="A permeable, water-bearing interval capable of storing and transmitting groundwater." />
+          <GeologyLabel className="shale" depth="70–100 m" name="Shale" detail="Fine-grained, typically low-permeability rock that may act as a confining layer." />
+        </div>
       </div>
       <div className="cards">
         {section.layers?.map(layer => (
           <article key={layer.table}>
-            <b>{layer.table}</b>
+            <span className="lv-strata-card-icon"><HubIcon title={layer.table === 'Aquifer' ? 'Aquifer' : 'Strata'} /></span><b>{layer.table}</b>
             <p>{layer.detail}</p>
             <PillRow items={layer.key.split('+').map(s => s.trim())} />
           </article>
@@ -417,12 +527,25 @@ function Geology({ section }: { section: ScreenSection }) {
   );
 }
 
+function GeologyLabel({ className, depth, name, detail }: { className: string; depth: string; name: string; detail: string }) {
+  return <p className={className}><b>{depth}</b><span className="lv-geology-trigger" tabIndex={0}>{name}<span className="lv-geology-tooltip" role="tooltip"><strong>What is {name}?</strong>{detail}<small>Recorded interval: {depth}</small></span></span></p>;
+}
+
 function RelChain({ section }: { section: ScreenSection }) {
+  const relationshipHelp: Record<string, { purpose: string; fields: string; relationship: string }> = {
+    'Strata Log': { purpose: 'Stores geological material intervals encountered down the bore.', fields: 'RN, Record, Top, Bottom, Description', relationship: 'Links geological intervals to the registered facility through RN.' },
+    'Registration - RN 123456': { purpose: 'The central facility record identified by Registered Number 123456.', fields: 'Registered Number (RN)', relationship: 'Acts as the parent context for Strata Log and Aquifer records.' },
+    'Aquifer': { purpose: 'Stores water-bearing intervals and their yield, condition and formation.', fields: 'RN, Record, Top, Bottom, Yield, Condition, Formation', relationship: 'Associates groundwater-bearing intervals with the registered facility.' },
+    'Lithologies': { purpose: 'Provides controlled geological material descriptions used by strata records.', fields: 'Lithology code and description', relationship: 'The physical Oracle relationship still requires verification.' },
+  };
   return (
     <>
       <div className="lv-chain">
         {section.items?.map((item, i) => (
-          <div className={i === 1 ? 'mint' : i === 3 ? 'lilac' : undefined} key={itemTitle(item)}>{itemTitle(item)}</div>
+          <div className={i === 1 ? 'mint' : i === 3 ? 'lilac' : undefined} key={itemTitle(item)} tabIndex={0}>
+            <RelationshipIcon title={itemTitle(item)} />{itemTitle(item)}
+            {relationshipHelp[itemTitle(item)] && <span className="lv-relation-tooltip" role="tooltip"><strong>{itemTitle(item)}</strong>{relationshipHelp[itemTitle(item)].purpose}<small><b>Key fields</b>{relationshipHelp[itemTitle(item)].fields}</small><small><b>Relationship</b>{relationshipHelp[itemTitle(item)].relationship}</small></span>}
+          </div>
         ))}
       </div>
       <div className="lv-legend-row">
@@ -433,13 +556,26 @@ function RelChain({ section }: { section: ScreenSection }) {
   );
 }
 
+function RelationshipIcon({ title }: { title: string }) {
+  if (/aquifer/i.test(title)) return <HubIcon title="Aquifer" />;
+  if (/registration/i.test(title)) return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h12l3 3v15H5zM17 3v5h3M9 12h7M9 16h7" /></svg>;
+  if (/litholog/i.test(title)) return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 3 5 3-5 3-5-3 5-3Zm10 6 5 3-5 3-5-3 5-3ZM7 15l5 3-5 3-5-3 5-3Z" /></svg>;
+  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5 9-5Zm-9 10 9 5 9-5M3 18l9 5 9-5" /></svg>;
+}
+
 function Measure({ section }: { section: ScreenSection }) {
-  const labels = Array.isArray(section.labels) ? section.labels : [];
   return (
     <div className="lv-measure">
-      <div className="art"><GeneratedArt kind="bore" label="Groundwater bore and water-level cross-section" /></div>
-      <div>
-        {labels.map((l, i) => <div className={`chip ${i === 0 ? 'green' : ''}`} key={l}>{l}</div>)}
+      <div className="art lv-water-measure-art">
+        <GeneratedArt kind="bore" label="Groundwater bore and water-level cross-section" />
+        <span className="measure-reference"><b>R · Reference Point</b><small>(Top of Casing)</small></span>
+        <span className="measure-surface"><b>N · Natural Surface</b></span>
+        <span className="measure-depth"><b>Measurement<br />· -14.3 m</b></span>
+        <i className="reference-line" aria-hidden="true" /><i className="surface-line" aria-hidden="true" /><i className="depth-arrow" aria-hidden="true" />
+      </div>
+      <div className="lv-measure-notes">
+        <div className="chip green">N · Natural Surface</div>
+        <div className="chip">R · Reference Point</div>
         {section.info && <Info>{section.info}</Info>}
       </div>
     </div>
@@ -449,10 +585,16 @@ function Measure({ section }: { section: ScreenSection }) {
 function Pump({ section }: { section: ScreenSection }) {
   const labels = Array.isArray(section.labels) ? section.labels : [];
   return (
-    <div className="lv-pump">
-      <div className="labels">{labels.slice(0, 3).map(l => <p key={l}>{l}</p>)}</div>
-      <GeneratedArt kind="pump" label="Pumping-test bore with discharge pipe and flow meter" />
-      <small>{labels[3]}</small>
+    <div className="lv-pump-diagram">
+      <GeneratedArt kind="pump" label="Pumping-test bore showing static and pumping water levels, drawdown, and discharge" />
+      <span className="pump-label static">{labels[0]}</span>
+      <span className="pump-label pumping">{labels[1]}</span>
+      <span className="pump-label drawdown">{labels[2]}</span>
+      <span className="pump-label discharge">{labels[3]}</span>
+      <i className="pump-guide static-line" aria-hidden="true" />
+      <i className="pump-guide pumping-line" aria-hidden="true" />
+      <i className="pump-drawdown-arrow" aria-hidden="true" />
+      <i className="pump-discharge-arrow" aria-hidden="true" />
     </div>
   );
 }
