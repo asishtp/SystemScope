@@ -1,0 +1,25 @@
+.sx-link-label {
+  position: absolute;
+  z-index: 4;
+  width: auto;
+  min-width: 128px;
+  max-width: 17%;
+  box-sizing: border-box;
+  padding: 5px 8px;
+  border: 1px solid #91b8ec;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 1px 4px #102a4318;
+  color: #174a88;
+  transform: translateX(-50%);
+}
+.sx-link-label.left { left: 30%; }
+.sx-link-label.right { left: 70%; }
+.sx-link-label.inferred { border-color: #e5a33b; background: #fffaf0; color: #9a5800; }
+.sx-link-label em { position: absolute; left: 50%; bottom: calc(100% + 3px); transform: translateX(-50%); padding: 0 4px; background: #fff; color: #0874ed; font-size: 9px; font-style: normal; font-weight: 700; white-space: nowrap; }
+.sx-link-label.inferred em { color: #b56800; }
+.sx-link-label span { display: flex; align-items: center; justify-content: center; gap: 4px; white-space: nowrap; }
+.sx-link-label b { padding: 1px 3px; border: 1px solid #75aceb; border-radius: 3px; background: #edf6ff; color: #075dca; font-size: 8px; }
+.sx-link-label b.pk { border-color: #73c794; background: #edfbf2; color: #12823d; }
+.sx-link-label code { overflow: hidden; max-width: 62px; text-overflow: ellipsis; color: #344054; font: 9px "Segoe UI", sans-serif; }
+.sx-link-label i { color: #0874ed; font-size: 12px; font-style: normal; }

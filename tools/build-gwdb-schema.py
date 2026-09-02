@@ -39,8 +39,10 @@ table_comments = {(r["OWNER"], r["TABLE_NAME"]): r["COMMENTS"] for r in comments
 column_comment_map = {(r["OWNER"], r["TABLE_NAME"], r["COLUMN_NAME"]): r["COMMENTS"] for r in column_comments}
 keys = {}
 constraint_table = {}
+constraint_columns = {}
 for r in constraints:
     constraint_table[(r["OWNER"], r["CONSTRAINT_NAME"])] = r["TABLE_NAME"]
+    constraint_columns.setdefault((r["OWNER"], r["CONSTRAINT_NAME"]), {})[r["COLUMN_POSITION"]] = r["COLUMN_NAME"]
     if r["CONSTRAINT_TYPE"] in ("P", "U"):
         keys.setdefault((r["OWNER"], r["TABLE_NAME"]), {})[r["COLUMN_NAME"]] = "PK" if r["CONSTRAINT_TYPE"] == "P" else "UK"
     elif r["CONSTRAINT_TYPE"] == "R":
@@ -74,7 +76,8 @@ for r in constraints:
     key = (r["TABLE_NAME"], target, r["CONSTRAINT_NAME"])
     if key not in seen:
         seen.add(key)
-        relations.append({"from": r["TABLE_NAME"], "to": target, "name": r["CONSTRAINT_NAME"], "column": r["COLUMN_NAME"], "status": "confirmed" if r["VALIDATED"] == "VALIDATED" else "inferred"})
+        target_column = constraint_columns.get((r["R_OWNER"] or r["OWNER"], r["R_CONSTRAINT_NAME"]), {}).get(r["COLUMN_POSITION"], "")
+        relations.append({"from": r["TABLE_NAME"], "to": target, "name": r["CONSTRAINT_NAME"], "column": r["COLUMN_NAME"], "targetColumn": target_column, "status": "confirmed" if r["VALIDATED"] == "VALIDATED" else "inferred"})
 
 result_tables = []
 for t in tables:
