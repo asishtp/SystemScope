@@ -852,7 +852,8 @@
   color: #0f172a;
   font-weight: 600;
 }
-.gwdb-list-grid td { padding: 9px 14px; border-top: 1px solid #eef2f6; }
+.gwdb-list-grid td { padding: 9px 14px; border-top: 1px solid #eef2f6; vertical-align: top; }
+.gwdb-list-grid td:nth-child(3) { max-width: 340px; white-space: normal; }
 .gwdb-list-grid tr:hover td { background: #f8fafc; }
 
 .gwdb-evidence { margin-top: 14px; }

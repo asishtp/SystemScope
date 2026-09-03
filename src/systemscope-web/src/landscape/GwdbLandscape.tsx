@@ -9,6 +9,7 @@ import {
   domainOf,
   formatCompactNumber,
   knowledgeBarTone,
+  tablePurpose,
   tablesForDomain,
   type DomainName,
   type GwSchema,
@@ -538,7 +539,7 @@ function Stat({ icon, value, label, warn, onClick }: { icon: ReactNode; value: n
 }
 
 function tableLine(t: LandscapeModel['tables'][number]) {
-  return [t.name, domainOf(t.name), String(t.columns.length), formatCompactNumber(t.rows), hasPkLabel(t)];
+  return [t.name, domainOf(t.name), tablePurpose(t).text, String(t.columns.length), formatCompactNumber(t.rows), hasPkLabel(t)];
 }
 
 function relLine(r: LandscapeModel['relationships'][number]) {
@@ -570,7 +571,7 @@ function KpiDialog({ kind, model, onClose }: { kind: KpiKind; model: LandscapeMo
     stale: 'Stale statistics',
   };
   const namedTables = (names: string[]) => model.tables.filter(t => names.includes(t.name)).map(tableLine);
-  const tableHeads = ['Table', 'Domain', 'Columns', 'Estimated rows', 'Primary key'];
+  const tableHeads = ['Table', 'Domain', 'Purpose', 'Columns', 'Estimated rows', 'Primary key'];
   const relHeads = ['From', 'To', 'Constraint', 'Columns', 'Status'];
   const match = (parts: string[]) => !q || parts.join(' ').toLowerCase().includes(q);
 
@@ -622,7 +623,10 @@ function KpiDialog({ kind, model, onClose }: { kind: KpiKind; model: LandscapeMo
         <header>
           <div>
             <h2 id="kpi-dialog-title">{titles[kind]}</h2>
-            <p>{rows.length.toLocaleString()} records from the imported {model.schemaName} metadata</p>
+            <p>
+              {rows.length.toLocaleString()} records from the imported {model.schemaName} metadata
+              {showDomainFilter ? '. Purpose uses Oracle comments where present; otherwise it is inferred from the table name and columns.' : ''}
+            </p>
           </div>
           <div className="gwdb-list-actions">
             <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search" aria-label={`Search ${titles[kind].toLowerCase()}`} />
