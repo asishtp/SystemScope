@@ -4,6 +4,7 @@ import { api } from './api';
 import bundledSchema from '../schema/gwdb-schema.json';
 import {
   buildLandscape,
+  DOMAIN_ORDER,
   domainDrawer,
   domainOf,
   formatCompactNumber,
@@ -546,6 +547,7 @@ function relLine(r: LandscapeModel['relationships'][number]) {
 
 function KpiDialog({ kind, model, onClose }: { kind: KpiKind; model: LandscapeModel; onClose: () => void }) {
   const [query, setQuery] = useState('');
+  const [domainFilter, setDomainFilter] = useState('');
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', onKey);
@@ -553,6 +555,7 @@ function KpiDialog({ kind, model, onClose }: { kind: KpiKind; model: LandscapeMo
   }, [onClose]);
   const q = query.trim().toLowerCase();
   const connected = new Set(model.relationships.flatMap(r => [r.from, r.to]));
+  const inDomain = (name: string) => !domainFilter || domainOf(name) === domainFilter;
   const titles: Record<KpiKind, string> = {
     tables: 'Tables',
     columns: 'Columns',
@@ -574,7 +577,7 @@ function KpiDialog({ kind, model, onClose }: { kind: KpiKind; model: LandscapeMo
   let heads = tableHeads;
   let rows: string[][] = [];
   if (kind === 'tables') {
-    rows = model.tables.filter(t => match([t.name, t.comment || '', domainOf(t.name)])).map(tableLine);
+    rows = model.tables.filter(t => inDomain(t.name) && match([t.name, t.comment || '', domainOf(t.name)])).map(tableLine);
   } else if (kind === 'columns') {
     heads = ['Table', 'Column', 'Data type', 'Key', 'Nullable', 'Comment'];
     rows = model.tables.flatMap(t => t.columns.map(c => [t.name, c.name, c.type, c.key || '—', c.nullable ? 'Yes' : 'No', c.comment || '—'])).filter(row => match(row));
@@ -601,14 +604,17 @@ function KpiDialog({ kind, model, onClose }: { kind: KpiKind; model: LandscapeMo
     ] as const).flatMap(([heading, names]) => names.filter(name => match([heading, name])).map(name => [heading, name]));
     if (match(['application usage not mapped'])) rows.push(['Application usage', 'Application usage is not mapped']);
   } else if (kind === 'connected') {
-    rows = model.tables.filter(t => connected.has(t.name) && match([t.name, domainOf(t.name)])).map(tableLine);
+    rows = model.tables.filter(t => connected.has(t.name) && inDomain(t.name) && match([t.name, domainOf(t.name)])).map(tableLine);
   } else if (kind === 'isolated') {
-    rows = namedTables(model.gapTables.isolated).filter(row => match(row));
+    rows = namedTables(model.gapTables.isolated).filter(row => inDomain(row[0]) && match(row));
   } else if (kind === 'invalid') {
-    rows = namedTables(model.gapTables.invalid).filter(row => match(row));
+    rows = namedTables(model.gapTables.invalid).filter(row => inDomain(row[0]) && match(row));
   } else {
-    rows = namedTables(model.gapTables.stale).filter(row => match(row));
+    rows = namedTables(model.gapTables.stale).filter(row => inDomain(row[0]) && match(row));
   }
+
+  const showDomainFilter = heads[1] === 'Domain';
+  const domainOptions = DOMAIN_ORDER.filter(name => model.tables.some(t => domainOf(t.name) === name));
 
   return (
     <div className="gwdb-list-overlay" role="dialog" aria-modal="true" aria-labelledby="kpi-dialog-title" onMouseDown={onClose}>
@@ -625,7 +631,23 @@ function KpiDialog({ kind, model, onClose }: { kind: KpiKind; model: LandscapeMo
         </header>
         <div className="gwdb-list-grid">
           <table>
-            <thead><tr>{heads.map(h => <th key={h}>{h}</th>)}</tr></thead>
+            <thead>
+              <tr>
+                {heads.map(h => (
+                  <th key={h}>
+                    {h === 'Domain' && showDomainFilter ? (
+                      <label className="col-filter">
+                        <span>Domain</span>
+                        <select value={domainFilter} onChange={e => setDomainFilter(e.target.value)} aria-label="Filter by domain" onClick={e => e.stopPropagation()}>
+                          <option value="">All domains</option>
+                          {domainOptions.map(name => <option key={name} value={name}>{name}</option>)}
+                        </select>
+                      </label>
+                    ) : h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
             <tbody>
               {rows.map((row, i) => <tr key={i}>{row.map((cell, j) => <td key={j}>{j === 0 ? <b>{cell}</b> : cell}</td>)}</tr>)}
               {!rows.length && <tr><td colSpan={heads.length}>No records match the current search.</td></tr>}
