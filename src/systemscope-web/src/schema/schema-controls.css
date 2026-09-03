@@ -35,6 +35,14 @@
   font-size: 11px;
 }
 
+.sx-shown {
+  margin-left: 8px;
+  color: #075dca;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .sx-canvas:fullscreen {
   display: flex;
   flex-direction: column;

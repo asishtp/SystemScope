@@ -14,7 +14,7 @@ const relations = schema.relationships as Relation[];
 
 export function SchemaExplorer({ onBack, embedded, initialDomain }:{ onBack:()=>void; embedded?: boolean; initialDomain?: string }) {
   const [query,setQuery]=useState(''); const [selected,setSelected]=useState(''); const [depth,setDepth]=useState(1); const [domain,setDomain]=useState(initialDomain||''); const [tab,setTab]=useState('Details'); const [expanded,setExpanded]=useState<Record<string,boolean>>({}); const [dataset,setDataset]=useState(''); const [zoom,setZoom]=useState(1);
-  useEffect(()=>{ if(initialDomain) setDomain(initialDomain); },[initialDomain]);
+  useEffect(()=>{ setDomain(initialDomain||''); },[initialDomain]);
   const canvasRef=useRef<HTMLElement>(null); const boardRef=useRef<HTMLDivElement>(null);
   const dragRef=useRef({active:false,x:0,y:0,left:0,top:0});
   const filtered=useMemo(()=>tables.filter(t=>(!domain||domainOf(t.name)===domain)&&(!query||`${t.name} ${t.comment} ${t.columns.map(c=>c.name).join(' ')}`.toLowerCase().includes(query.toLowerCase()))),[query,domain]);
@@ -31,9 +31,9 @@ export function SchemaExplorer({ onBack, embedded, initialDomain }:{ onBack:()=>
   return <div className={`sx${embedded?' embedded':''}`}>
     {!embedded && <header className="sx-head"><button onClick={onBack}>Systems</button><span>/</span><b>Groundwater Database</b><span>/</span><strong>Schema Explorer</strong><em>TEST</em><select><option>GW</option></select><label>⌕<input value={query} onChange={e=>setQuery(e.target.value)} placeholder={`Search ${tables.length} tables`}/></label><button>⇩ Import Metadata</button><button className="primary" onClick={exportData}>⇧ Export</button></header>}
     {embedded && <header className="sx-head compact"><label>⌕<input value={query} onChange={e=>setQuery(e.target.value)} placeholder={`Search ${tables.length} tables`}/></label><button className="primary" onClick={exportData}>⇧ Export</button></header>}
-    <section className="sx-stats"><Stat n={schema.counts.tables} label="Tables" icon="▦" onClick={()=>setDataset('Tables')}/><Stat n={schema.counts.columns} label="Columns" icon="⇵" onClick={()=>setDataset('Columns')}/><Stat n={schema.counts.relationships} label="Relationships" icon="⌘" onClick={()=>setDataset('Relationships')}/><Stat n={6} label="Domains" icon="◇" onClick={()=>setDataset('Domains')}/><Stat n={schema.reviewFlags.length} label="Review Flags" icon="⚠" warn onClick={()=>setDataset('Review Flags')}/></section>
+    <section className="sx-stats"><Stat n={schema.counts.tables} label="Tables" icon="▦" onClick={()=>{setDomain('');setQuery('');setSelected('');setDataset('Tables')}}/><Stat n={schema.counts.columns} label="Columns" icon="⇵" onClick={()=>setDataset('Columns')}/><Stat n={schema.counts.relationships} label="Relationships" icon="⌘" onClick={()=>setDataset('Relationships')}/><Stat n={6} label="Domains" icon="◇" onClick={()=>setDataset('Domains')}/><Stat n={schema.reviewFlags.length} label="Review Flags" icon="⚠" warn onClick={()=>setDataset('Review Flags')}/></section>
     {dataset&&<DatasetDialog name={dataset} onClose={()=>setDataset('')} />}
-    <main className="sx-work"><section className="sx-canvas" ref={canvasRef}><div className="sx-tools"><button title="Zoom in" onClick={()=>setZoom(z=>Math.min(1.8,+(z+.1).toFixed(1)))}>＋</button><button title="Zoom out" onClick={()=>setZoom(z=>Math.max(.6,+(z-.1).toFixed(1)))}>−</button><button title="Toggle fullscreen" onClick={toggleFullscreen}>⛶</button><button title="Centre view" onClick={centreView}>◎</button><button onClick={fitView}>Fit view</button><strong className="sx-zoom-value">{Math.round(zoom*100)}%</strong><span>Relationship depth</span><select value={depth} onChange={e=>setDepth(+e.target.value)}><option value="1">1 hop</option><option value="2">2 hops</option><option value="3">3 hops</option></select><i/> Confirmed <i className="dash"/> Inferred</div><div className="sx-board" ref={boardRef} tabIndex={0} aria-label="Schema canvas. Drag to pan or use arrow keys." onPointerDown={beginPan} onPointerMove={movePan} onPointerUp={endPan} onPointerCancel={endPan} onKeyDown={e=>{const amount=e.shiftKey?180:70;if(e.key==='ArrowLeft')e.currentTarget.scrollBy({left:-amount,behavior:'smooth'});else if(e.key==='ArrowRight')e.currentTarget.scrollBy({left:amount,behavior:'smooth'});else if(e.key==='ArrowUp')e.currentTarget.scrollBy({top:-amount,behavior:'smooth'});else if(e.key==='ArrowDown')e.currentTarget.scrollBy({top:amount,behavior:'smooth'})}} onWheel={e=>{if(e.ctrlKey||e.metaKey){e.preventDefault();setZoom(z=>Math.max(.6,Math.min(1.8,+(z+(e.deltaY<0?.1:-.1)).toFixed(1))))}}}><div className="sx-board-content" style={{transform:`scale(${zoom})`,width:`${100/zoom}%`}}>
+    <main className="sx-work"><section className="sx-canvas" ref={canvasRef}><div className="sx-tools"><button title="Zoom in" onClick={()=>setZoom(z=>Math.min(1.8,+(z+.1).toFixed(1)))}>＋</button><button title="Zoom out" onClick={()=>setZoom(z=>Math.max(.6,+(z-.1).toFixed(1)))}>−</button><button title="Toggle fullscreen" onClick={toggleFullscreen}>⛶</button><button title="Centre view" onClick={centreView}>◎</button><button onClick={fitView}>Fit view</button><strong className="sx-zoom-value">{Math.round(zoom*100)}%</strong><b className="sx-shown">{filtered.length} of {tables.length} tables on the canvas</b><span>Relationship depth</span><select value={depth} onChange={e=>setDepth(+e.target.value)}><option value="1">1 hop</option><option value="2">2 hops</option><option value="3">3 hops</option></select>{domain&&<button type="button" onClick={()=>setDomain('')}>Clear {domain} filter</button>}<i/> Confirmed <i className="dash"/> Inferred</div><div className="sx-board" ref={boardRef} tabIndex={0} aria-label="Schema canvas. Drag to pan or use arrow keys." onPointerDown={beginPan} onPointerMove={movePan} onPointerUp={endPan} onPointerCancel={endPan} onKeyDown={e=>{const amount=e.shiftKey?180:70;if(e.key==='ArrowLeft')e.currentTarget.scrollBy({left:-amount,behavior:'smooth'});else if(e.key==='ArrowRight')e.currentTarget.scrollBy({left:amount,behavior:'smooth'});else if(e.key==='ArrowUp')e.currentTarget.scrollBy({top:-amount,behavior:'smooth'});else if(e.key==='ArrowDown')e.currentTarget.scrollBy({top:amount,behavior:'smooth'})}} onWheel={e=>{if(e.ctrlKey||e.metaKey){e.preventDefault();setZoom(z=>Math.max(.6,Math.min(1.8,+(z+(e.deltaY<0?.1:-.1)).toFixed(1))))}}}><div className="sx-board-content" style={{transform:`scale(${zoom})`,width:`${100/zoom}%`}}>
       {selected&&current&&<RelationshipMapV2 table={current} relations={related} onSelect={setSelected} onClose={()=>setSelected('')} />}
       {visible.map((t,i)=><article key={t.name} className={`sx-table ${t.name===current?.name?'selected':''}`} onClick={()=>setSelected(t.name)}><h3>{t.name}<button>•••</button></h3>{t.columns.slice(0,expanded[t.name]?t.columns.length:6).map(c=><div key={c.name}><small className={c.key?c.key.toLowerCase():''}>{c.key}</small><span>{c.name}</span><code>{c.type}</code></div>)}{t.columns.length>6&&<button className="more" onClick={e=>{e.stopPropagation();setExpanded(x=>({...x,[t.name]:!x[t.name]}))}}>{expanded[t.name]?'Show less':`${t.columns.length-6} more columns⌄`}</button>}<b className="domain" style={{background:['#35b8af','#1670df','#7e3bad','#e5a900'][i%4]}}/></article>)}
       {!visible.length&&<div className="sx-empty">No tables match the current search and domain filter.</div>}
@@ -44,10 +44,34 @@ export function SchemaExplorer({ onBack, embedded, initialDomain }:{ onBack:()=>
 function Stat({n,label,icon,warn,onClick}:{n:number;label:string;icon:string;warn?:boolean;onClick:()=>void}){return <button type="button" onClick={onClick}><i className={warn?'warn':''}>{icon}</i><b>{n}</b><span>{label}</span></button>}
 
 function DatasetDialog({name,onClose}:{name:string;onClose:()=>void}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
   const columnRows=tables.flatMap(t=>t.columns.map(c=>[t.name,c.name,c.type,c.key||'—',c.nullable?'Yes':'No']));
   const domains=['Bore Information','Water Levels','Water Quality','Drilling','Monitoring','Reference Data'];
   const config:Record<string,{heads:string[];rows:string[][]}>={Tables:{heads:['Owner','Table','Columns','Estimated rows','Tablespace'],rows:tables.map(t=>[t.owner,t.name,String(t.columns.length),t.rows.toLocaleString(),t.tablespace])},Columns:{heads:['Table','Column','Data type','Key','Nullable'],rows:columnRows},Relationships:{heads:['From table','To table','Constraint','Column','Status'],rows:relations.map(r=>[r.from,r.to,r.name,r.column,r.status])},Domains:{heads:['Business domain','Tables'],rows:domains.map(x=>[x,String(tables.filter(t=>domainOf(t.name)===x).length)])},'Review Flags':{heads:['Review issue'],rows:schema.reviewFlags.map(x=>[x])}};
-  const data=config[name]; return <div className="sx-data-overlay" role="dialog" aria-modal="true"><section><header><div><h2>{name}</h2><p>{data.rows.length.toLocaleString()} records from the supplied metadata extracts</p></div><button onClick={onClose}>×</button></header><div className="sx-data-grid"><table><thead><tr>{data.heads.map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{data.rows.map((row,i)=><tr key={i}>{row.map((v,j)=><td key={j}>{v}</td>)}</tr>)}</tbody></table></div></section></div>
+  const data=config[name];
+  return (
+    <div className="sx-data-overlay" role="dialog" aria-modal="true" aria-labelledby="sx-data-title" onMouseDown={onClose}>
+      <section onMouseDown={e => e.stopPropagation()}>
+        <header>
+          <div>
+            <h2 id="sx-data-title">{name}</h2>
+            <p>{data.rows.length.toLocaleString()} records from the supplied metadata extracts</p>
+          </div>
+          <button type="button" className="sx-data-close" onClick={onClose} aria-label="Close">Close</button>
+        </header>
+        <div className="sx-data-grid">
+          <table>
+            <thead><tr>{data.heads.map(h=><th key={h}>{h}</th>)}</tr></thead>
+            <tbody>{data.rows.map((row,i)=><tr key={i}>{row.map((v,j)=><td key={j}>{v}</td>)}</tr>)}</tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  );
 }
 
 function RelationshipMapV2({table,relations:onMap,onSelect,onClose}:{table:Table;relations:Relation[];onSelect:(name:string)=>void;onClose:()=>void}) {

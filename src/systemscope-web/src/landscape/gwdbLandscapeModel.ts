@@ -227,6 +227,14 @@ export type LandscapeModel = {
   knowledge: KnowledgeRow[];
   documentedPct: number;
   gaps: GapRow[];
+  gapTables: {
+    missingDescriptions: string[];
+    withoutPk: string[];
+    isolated: string[];
+    tempArchive: string[];
+    invalid: string[];
+    stale: string[];
+  };
   relationshipHealth: { healthy: number; inferred: number; issues: number };
   tables: SchemaTable[];
   relationships: SchemaRelation[];
@@ -351,6 +359,14 @@ export function buildLandscape(schema: GwSchema, learning?: LearningOverlayTable
     knowledge,
     documentedPct,
     gaps,
+    gapTables: {
+      missingDescriptions: tables.filter(t => !t.comment?.trim()).map(t => t.name),
+      withoutPk: tables.filter(t => !hasPrimaryKey(t)).map(t => t.name),
+      isolated: tables.filter(t => !connected.has(t.name)).map(t => t.name),
+      tempArchive: tables.filter(t => isTemporaryOrArchive(t.name)).map(t => t.name),
+      invalid: tables.filter(isInvalidObject).map(t => t.name),
+      stale: tables.filter(t => !t.rows || !t.lastAnalyzed).map(t => t.name),
+    },
     relationshipHealth: {
       healthy: confirmed,
       inferred,

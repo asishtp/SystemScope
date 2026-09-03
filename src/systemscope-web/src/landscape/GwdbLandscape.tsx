@@ -20,6 +20,7 @@ import './gwdb-landscape-fix.css';
 
 const TABS = ['Landscape Overview', 'ER Diagram', 'Table Catalogue', 'Dependencies', 'Data Dictionary', 'Evidence'] as const;
 type Tab = (typeof TABS)[number];
+type KpiKind = 'tables' | 'columns' | 'relationships' | 'objects' | 'gaps' | 'connected' | 'isolated' | 'confirmed' | 'inferred' | 'invalid' | 'stale';
 
 export function GwdbLandscape({ systemKey, onBack, onReview }: { systemKey: string; onBack: () => void; onReview: () => void }) {
   const [schema, setSchema] = useState<GwSchema>(bundledSchema as GwSchema);
@@ -30,6 +31,8 @@ export function GwdbLandscape({ systemKey, onBack, onReview }: { systemKey: stri
   const [drawerOpen, setDrawerOpen] = useState(true);
   const [listOpen, setListOpen] = useState(false);
   const [catalogueDomain, setCatalogueDomain] = useState<DomainName | ''>('');
+  const [erDomain, setErDomain] = useState('');
+  const [kpi, setKpi] = useState<KpiKind | null>(null);
 
   useEffect(() => {
     api<GwSchema>(`/systems/${encodeURIComponent(systemKey)}/schema`)
@@ -50,7 +53,8 @@ export function GwdbLandscape({ systemKey, onBack, onReview }: { systemKey: stri
     setListOpen(true);
   };
 
-  const openEr = () => setTab('ER Diagram');
+  const openEr = () => { setErDomain(''); setTab('ER Diagram'); };
+  const openFilteredEr = () => { setErDomain(selected); setTab('ER Diagram'); };
   const exportAssessment = () => {
     const blob = new Blob([JSON.stringify({
       system: systemKey,
@@ -104,16 +108,24 @@ export function GwdbLandscape({ systemKey, onBack, onReview }: { systemKey: stri
 
       <div className="gwdb-body">
         <section className="gwdb-stats" aria-label="Landscape totals">
-          <Stat icon={<TableIcon />} value={model.tableCount} label="Tables" />
-          <Stat icon={<ColumnsIcon />} value={model.columnCount} label="Columns" />
-          <Stat icon={<ShareIcon />} value={model.relationshipCount} label="Relationships" />
-          <Stat icon={<DbIcon />} value={model.objectCount} label="Database Objects" />
-          <Stat icon={<WarnIcon />} value={model.investigationGapCount} label="Investigation Gaps" warn />
+          <Stat icon={<TableIcon />} value={model.tableCount} label="Tables" onClick={() => setKpi('tables')} />
+          <Stat icon={<ColumnsIcon />} value={model.columnCount} label="Columns" onClick={() => setKpi('columns')} />
+          <Stat icon={<ShareIcon />} value={model.relationshipCount} label="Relationships" onClick={() => setKpi('relationships')} />
+          <Stat icon={<DbIcon />} value={model.objectCount} label="Database Objects" onClick={() => setKpi('objects')} />
+          <Stat icon={<WarnIcon />} value={model.investigationGapCount} label="Investigation Gaps" warn onClick={() => setKpi('gaps')} />
         </section>
 
         <nav className="gwdb-tabs" aria-label="Landscape views">
           {TABS.map(name => (
-            <button key={name} type="button" className={tab === name ? 'active' : ''} onClick={() => setTab(name)}>{name}</button>
+            <button
+              key={name}
+              type="button"
+              className={tab === name ? 'active' : ''}
+              onClick={() => {
+                if (name === 'ER Diagram') setErDomain('');
+                setTab(name);
+              }}
+            >{name}</button>
           ))}
         </nav>
 
@@ -122,14 +134,15 @@ export function GwdbLandscape({ systemKey, onBack, onReview }: { systemKey: stri
             model={model}
             selected={selected}
             onSelect={selectDomain}
-            onOpenEr={openEr}
+            onOpenEr={openFilteredEr}
             onReview={onReview}
             onDependencies={() => setTab('Dependencies')}
+            onOpenKpi={setKpi}
           />
         )}
         {tab === 'ER Diagram' && (
           <div className="gwdb-embed">
-            <SchemaExplorer onBack={() => setTab('Landscape Overview')} embedded initialDomain={selected} />
+            <SchemaExplorer key={erDomain || 'all'} onBack={() => setTab('Landscape Overview')} embedded initialDomain={erDomain} />
           </div>
         )}
         {tab === 'Table Catalogue' && <TableCatalogue model={model} domainFilter={catalogueDomain} onOpenEr={openEr} />}
@@ -188,6 +201,7 @@ export function GwdbLandscape({ systemKey, onBack, onReview }: { systemKey: stri
         </aside>
       )}
 
+      {kpi && <KpiDialog kind={kpi} model={model} onClose={() => setKpi(null)} />}
       {listOpen && (
         <DomainTableList
           domain={selected}
@@ -209,7 +223,7 @@ export function GwdbLandscape({ systemKey, onBack, onReview }: { systemKey: stri
 }
 
 function Overview({
-  model, selected, onSelect, onOpenEr, onReview, onDependencies,
+  model, selected, onSelect, onOpenEr, onReview, onDependencies, onOpenKpi,
 }: {
   model: LandscapeModel;
   selected: DomainName;
@@ -217,7 +231,9 @@ function Overview({
   onOpenEr: () => void;
   onReview: () => void;
   onDependencies: () => void;
+  onOpenKpi: (kind: KpiKind) => void;
 }) {
+  void onReview;
   const maxRels = Math.max(...model.importantTables.map(t => t.relationships), 1);
   const maxRows = Math.max(...model.recordVolumes.map(t => t.rows), 1);
   const health = model.relationshipHealth;
@@ -307,20 +323,20 @@ function Overview({
       <section className="gwcard gaps">
         <h2>Investigation Gaps <InfoTip text="Quality issues detected from the imported schema that still need confirmation." /></h2>
         {model.gaps.map(gap => (
-          <p key={gap.text}><WarnIcon /> {gap.text}</p>
+          <p key={gap.text} role="button" tabIndex={0} onClick={() => onOpenKpi('gaps')} onKeyDown={e => { if (e.key === 'Enter') onOpenKpi('gaps'); }}><WarnIcon /> {gap.text}</p>
         ))}
-        <button type="button" className="gwdb-btn" onClick={onReview}>Review all gaps</button>
+        <button type="button" className="gwdb-btn" onClick={() => onOpenKpi('gaps')}>Review all gaps</button>
       </section>
 
       <section className="gwcard health">
         <h2>Database Health &amp; Structure <InfoTip text="Connectivity and validity of tables and constraints from the imported Oracle metadata." /></h2>
         <div>
-          <HealthTile icon={<LinkIcon />} tone="ok" value={model.connectedTables} label="Connected tables" />
-          <HealthTile icon={<BrokenLinkIcon />} tone="bad" value={model.isolatedTables} label="Isolated tables" />
-          <HealthTile icon={<ConfirmedLinkIcon />} tone="ok" value={model.confirmedRelationships} label="Confirmed relationships" />
-          <HealthTile icon={<InferredLinkIcon />} tone="mid" value={model.inferredRelationships} label="Inferred relationships" />
-          <HealthTile icon={<InvalidIcon />} tone="bad" value={model.invalidObjects} label="Invalid objects" />
-          <HealthTile icon={<ClockIcon />} tone="mute" value={model.staleStatistics} label="Stale statistics" />
+          <HealthTile icon={<LinkIcon />} tone="ok" value={model.connectedTables} label="Connected tables" onClick={() => onOpenKpi('connected')} />
+          <HealthTile icon={<BrokenLinkIcon />} tone="bad" value={model.isolatedTables} label="Isolated tables" onClick={() => onOpenKpi('isolated')} />
+          <HealthTile icon={<ConfirmedLinkIcon />} tone="ok" value={model.confirmedRelationships} label="Confirmed relationships" onClick={() => onOpenKpi('confirmed')} />
+          <HealthTile icon={<InferredLinkIcon />} tone="mid" value={model.inferredRelationships} label="Inferred relationships" onClick={() => onOpenKpi('inferred')} />
+          <HealthTile icon={<InvalidIcon />} tone="bad" value={model.invalidObjects} label="Invalid objects" onClick={() => onOpenKpi('invalid')} />
+          <HealthTile icon={<ClockIcon />} tone="mute" value={model.staleStatistics} label="Stale statistics" onClick={() => onOpenKpi('stale')} />
         </div>
       </section>
 
@@ -334,7 +350,7 @@ function Overview({
             <li><i className="bad" /> Issues <b>{issuePct}% ({health.issues})</b></li>
           </ul>
         </div>
-        <button type="button" className="linkish" onClick={onOpenEr}>Explore relationship health <span>›</span></button>
+        <button type="button" className="linkish" onClick={() => onOpenKpi('confirmed')}>Explore relationship health <span>›</span></button>
       </section>
     </div>
   );
@@ -369,7 +385,7 @@ function DomainTableList({
             <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search tables" aria-label="Search tables in this domain" />
             <button type="button" className="gwdb-btn" onClick={onOpenEr}>Open ER diagram</button>
             <button type="button" className="gwdb-btn" onClick={onOpenCatalogue}>Open catalogue</button>
-            <button type="button" className="gwdb-list-close" onClick={onClose} aria-label="Close">×</button>
+            <button type="button" className="gwdb-list-close" onClick={onClose} aria-label="Close">Close</button>
           </div>
         </header>
         <div className="gwdb-list-grid">
@@ -510,13 +526,114 @@ function DataDictionary({ model }: { model: LandscapeModel }) {
   );
 }
 
-function Stat({ icon, value, label, warn }: { icon: ReactNode; value: number; label: string; warn?: boolean }) {
+function Stat({ icon, value, label, warn, onClick }: { icon: ReactNode; value: number; label: string; warn?: boolean; onClick?: () => void }) {
   return (
-    <article>
+    <button type="button" className="gwdb-stat" onClick={onClick}>
       <i className={warn ? 'warn' : undefined}>{icon}</i>
       <strong>{value.toLocaleString()}</strong>
       <small>{label}</small>
-    </article>
+    </button>
+  );
+}
+
+function tableLine(t: LandscapeModel['tables'][number]) {
+  return [t.name, domainOf(t.name), String(t.columns.length), formatCompactNumber(t.rows), hasPkLabel(t)];
+}
+
+function relLine(r: LandscapeModel['relationships'][number]) {
+  return [r.from, r.to, r.name, `${r.column} → ${r.targetColumn}`, r.status];
+}
+
+function KpiDialog({ kind, model, onClose }: { kind: KpiKind; model: LandscapeModel; onClose: () => void }) {
+  const [query, setQuery] = useState('');
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+  const q = query.trim().toLowerCase();
+  const connected = new Set(model.relationships.flatMap(r => [r.from, r.to]));
+  const titles: Record<KpiKind, string> = {
+    tables: 'Tables',
+    columns: 'Columns',
+    relationships: 'Relationships',
+    objects: 'Database Objects',
+    gaps: 'Investigation Gaps',
+    connected: 'Connected tables',
+    isolated: 'Isolated tables',
+    confirmed: 'Confirmed relationships',
+    inferred: 'Inferred relationships',
+    invalid: 'Invalid objects',
+    stale: 'Stale statistics',
+  };
+  const namedTables = (names: string[]) => model.tables.filter(t => names.includes(t.name)).map(tableLine);
+  const tableHeads = ['Table', 'Domain', 'Columns', 'Estimated rows', 'Primary key'];
+  const relHeads = ['From', 'To', 'Constraint', 'Columns', 'Status'];
+  const match = (parts: string[]) => !q || parts.join(' ').toLowerCase().includes(q);
+
+  let heads = tableHeads;
+  let rows: string[][] = [];
+  if (kind === 'tables') {
+    rows = model.tables.filter(t => match([t.name, t.comment || '', domainOf(t.name)])).map(tableLine);
+  } else if (kind === 'columns') {
+    heads = ['Table', 'Column', 'Data type', 'Key', 'Nullable', 'Comment'];
+    rows = model.tables.flatMap(t => t.columns.map(c => [t.name, c.name, c.type, c.key || '—', c.nullable ? 'Yes' : 'No', c.comment || '—'])).filter(row => match(row));
+  } else if (kind === 'relationships' || kind === 'confirmed' || kind === 'inferred') {
+    heads = relHeads;
+    const status = kind === 'confirmed' ? 'confirmed' : kind === 'inferred' ? 'inferred' : '';
+    rows = model.relationships.filter(r => (!status || r.status === status) && match([r.from, r.to, r.name, r.column, r.status])).map(relLine);
+  } else if (kind === 'objects') {
+    heads = ['Object type', 'Count', 'Detail'];
+    rows = [
+      ['TABLE', String(model.tableCount), 'Imported Oracle tables shown on this landscape'],
+      ['Other objects', String(Math.max(0, model.objectCount - model.tableCount)), 'Packages, procedures, views, sequences and similar objects counted in the extract'],
+      ['Object dependencies', String(model.dependencyCount), 'Recorded object-to-object dependencies'],
+    ].filter(row => match(row));
+  } else if (kind === 'gaps') {
+    heads = ['Gap', 'Item'];
+    rows = ([
+      ['Tables missing descriptions', model.gapTables.missingDescriptions],
+      ['Tables without primary keys', model.gapTables.withoutPk],
+      ['Isolated tables', model.gapTables.isolated],
+      ['Temporary or archive candidates', model.gapTables.tempArchive],
+      ['Invalid objects', model.gapTables.invalid],
+      ['Stale statistics', model.gapTables.stale],
+    ] as const).flatMap(([heading, names]) => names.filter(name => match([heading, name])).map(name => [heading, name]));
+    if (match(['application usage not mapped'])) rows.push(['Application usage', 'Application usage is not mapped']);
+  } else if (kind === 'connected') {
+    rows = model.tables.filter(t => connected.has(t.name) && match([t.name, domainOf(t.name)])).map(tableLine);
+  } else if (kind === 'isolated') {
+    rows = namedTables(model.gapTables.isolated).filter(row => match(row));
+  } else if (kind === 'invalid') {
+    rows = namedTables(model.gapTables.invalid).filter(row => match(row));
+  } else {
+    rows = namedTables(model.gapTables.stale).filter(row => match(row));
+  }
+
+  return (
+    <div className="gwdb-list-overlay" role="dialog" aria-modal="true" aria-labelledby="kpi-dialog-title" onMouseDown={onClose}>
+      <section onMouseDown={e => e.stopPropagation()}>
+        <header>
+          <div>
+            <h2 id="kpi-dialog-title">{titles[kind]}</h2>
+            <p>{rows.length.toLocaleString()} records from the imported {model.schemaName} metadata</p>
+          </div>
+          <div className="gwdb-list-actions">
+            <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search" aria-label={`Search ${titles[kind].toLowerCase()}`} />
+            <button type="button" className="gwdb-list-close" onClick={onClose}>Close</button>
+          </div>
+        </header>
+        <div className="gwdb-list-grid">
+          <table>
+            <thead><tr>{heads.map(h => <th key={h}>{h}</th>)}</tr></thead>
+            <tbody>
+              {rows.map((row, i) => <tr key={i}>{row.map((cell, j) => <td key={j}>{j === 0 ? <b>{cell}</b> : cell}</td>)}</tr>)}
+              {!rows.length && <tr><td colSpan={heads.length}>No records match the current search.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
   );
 }
 
@@ -530,13 +647,13 @@ function DrawerStat({ icon, value, label }: { icon: ReactNode; value: number; la
   );
 }
 
-function HealthTile({ icon, value, label, tone }: { icon: ReactNode; value: number; label: string; tone: string }) {
+function HealthTile({ icon, value, label, tone, onClick }: { icon: ReactNode; value: number; label: string; tone: string; onClick?: () => void }) {
   return (
-    <article className={tone}>
+    <button type="button" className={`health-tile ${tone}`} onClick={onClick}>
       <i>{icon}</i>
       <strong>{value.toLocaleString()}</strong>
       <small>{label}</small>
-    </article>
+    </button>
   );
 }
 
