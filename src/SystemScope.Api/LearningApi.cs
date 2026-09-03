@@ -11,6 +11,7 @@ public static class LearningApi
         api.MapGet("/systems/{systemId}/learning-dashboard", Dashboard);
         api.MapGet("/systems/{systemId}/learning-search", Search);
         api.MapGet("/systems/{systemId}/data-model", DataModel);
+        api.MapGet("/systems/{systemId}/schema", SchemaMetadata);
         api.MapGet("/systems/{systemId}/tables/{tableId}", Table);
         api.MapGet("/systems/{systemId}/glossary", Glossary);
         api.MapGet("/learning/courses/{courseId:guid}/lessons", CourseLessons);
@@ -105,6 +106,18 @@ public static class LearningApi
         foreach (var table in tables.Where(x => Contains(x.Name, like) || Contains(x.TableKey, like) || Contains(x.Grain, like)))
             hits.Add(new { type = "Table", id = table.Id, key = table.TableKey, title = table.Name, detail = table.Grain ?? table.Domain, evidenceStatus = table.EvidenceStatus });
         return Results.Ok(hits.Take(25));
+    }
+
+    static IResult SchemaMetadata(string systemId)
+    {
+        if (!systemId.Equals("gwdb", StringComparison.OrdinalIgnoreCase))
+            return Results.NotFound();
+        var path = Path.Combine(AppContext.BaseDirectory, "schema", "gwdb-schema.json");
+        if (!File.Exists(path))
+            path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "systemscope-web", "src", "schema", "gwdb-schema.json"));
+        if (!File.Exists(path))
+            return Results.NotFound();
+        return Results.File(path, "application/json");
     }
 
     static async Task<IResult> DataModel(string systemId, AppDbContext db)

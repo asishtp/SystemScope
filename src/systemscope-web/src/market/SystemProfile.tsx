@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../landscape/api';
 import { formatDate, formatStamp, pillClass } from './types';
 import './market.css';
+import { GwdbLandscape } from '../landscape/GwdbLandscape';
 
 type Profile = {
   breadcrumb: string[];
@@ -66,6 +67,9 @@ export function SystemProfile({
   useEffect(() => {
     api<Payload>(`/scan/profile/${encodeURIComponent(catalogKey)}`).then(setData).catch(e => setError(e.message));
   }, [catalogKey]);
+  if (catalogKey.toLowerCase() === 'gwdb' && initialTab === 'landscape') {
+    return <GwdbLandscape systemKey={catalogKey} onBack={() => onOpenSystem(catalogKey)} onReview={() => onOpenAssessment(catalogKey)} />;
+  }
   if (error) return <div className="empty"><p>{error}</p></div>;
   if (!data) return <div className="empty"><p>Loading system profile…</p></div>;
   const p = data.profile;
@@ -86,6 +90,7 @@ export function SystemProfile({
         </div>
         <div className="scan-head-actions">
           <button className="ghost">Edit system</button>
+          {catalogKey.toLowerCase() === 'gwdb' && <button className="ghost" onClick={() => { window.location.hash = '/systems/gwdb/landscape'; }}>Current landscape</button>}
           {onOpenLearn && catalogKey.toLowerCase() === 'gwdb' && <button className="ghost" onClick={() => onOpenLearn(catalogKey)}>Learn GWDB</button>}
           <button className="primary" onClick={() => onOpenAssessment(catalogKey)}>Open assessment</button>
         </div>

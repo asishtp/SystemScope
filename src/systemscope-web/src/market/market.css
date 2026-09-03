@@ -193,8 +193,9 @@ blockquote{background:#f4f8f7;border-radius:8px;padding:12px;color:#3d5552;font-
 .sys-identity b,.sys-identity small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sys-identity small{color:#788a88;margin-top:3px;font-weight:400}
 .sys-ico{width:40px;height:40px;border-radius:10px;background:#dcefeb;color:#176f66;display:grid;place-items:center;flex:0 0 auto;font-size:16px}
-.sys-ico.bls{background:#dce8f4;color:#2a5f93}
-.sys-ico.wasp{background:#e8eef6;color:#3a5f88}
+.sys-ico.sys-key-bls{background:#dce8f4;color:#2a5f93}
+.sys-ico.sys-key-wasp{background:#e8eef6;color:#3a5f88}
+.sys-ico.sys-key-gwdb{background:#dce8f4;color:#1d4ed8}
 .sys-tech{display:flex;flex-wrap:wrap;gap:6px}
 .tech-chip{display:inline-flex;align-items:center;background:#eef3f2;color:#3d5552;border-radius:99px;padding:4px 9px;font-size:11px;font-weight:600}
 .tech-chip.more{background:#e1f2ed;color:#1b7165}

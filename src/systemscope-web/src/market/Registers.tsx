@@ -140,7 +140,7 @@ export function SystemsView({ onOpen, onOpenAssessment }: { onOpen: (key: string
                   onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(row); } }}
                 >
                   <span className="sys-identity">
-                    <span className={`sys-ico ${key}`}>{SYSTEM_ICON[key] || '▣'}</span>
+                    <span className={`sys-ico sys-key-${key}`}>{SYSTEM_ICON[key] || '▣'}</span>
                     <span><b>{row.name}{row.acronym ? ` (${row.acronym})` : ''}</b><small>{blurb(row.description)}</small></span>
                   </span>
                   <span className="sys-tech">
@@ -178,7 +178,7 @@ export function SystemsView({ onOpen, onOpenAssessment }: { onOpen: (key: string
               const pct = row.informationCompleteness || 0;
               return (
                 <button className="sys-card" key={row.id} onClick={() => open(row)}>
-                  <span className={`sys-ico ${key}`}>{SYSTEM_ICON[key] || '▣'}</span>
+                  <span className={`sys-ico sys-key-${key}`}>{SYSTEM_ICON[key] || '▣'}</span>
                   <b>{row.name}{row.acronym ? ` (${row.acronym})` : ''}</b>
                   <small>{blurb(row.description)}</small>
                   <span className={`pill${isLegacy(row.lifecycle) ? ' amber' : ''}`}>{row.lifecycle || 'Active'}</span>

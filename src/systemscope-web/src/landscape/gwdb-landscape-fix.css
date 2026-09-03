@@ -1,0 +1,160 @@
+/* Isolate the landscape's nested content region from the shell's global main rules. */
+.gwdb-landscape .gwdb-grid > * {
+  min-width: 0;
+}
+
+/* App.css styles every header element as a page header. Undo that inside this view. */
+.gwdb-landscape header {
+  min-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.gwdb-landscape .gwdb-top {
+  height: 64px;
+  min-height: 64px;
+  padding: 0 20px;
+  box-sizing: border-box;
+}
+
+.gwdb-landscape .domains > header {
+  min-height: 0;
+  padding: 0;
+  align-items: flex-start;
+}
+
+.gwdb-landscape .gwdb-drawer {
+  top: 64px;
+}
+
+/* The supplied GWDB landscape is an edge-to-edge assessment workspace. */
+.shell:has(.gwdb-landscape) {
+  grid-template-columns: 180px minmax(0, 1fr);
+}
+
+.shell:has(.gwdb-landscape) > aside {
+  width: 180px;
+  padding: 18px 8px 14px;
+  background: linear-gradient(180deg, #062d5c 0%, #002852 100%);
+  color: #fff;
+}
+
+.shell:has(.gwdb-landscape) > aside .brand > span {
+  width: 34px;
+  height: 34px;
+  border-radius: 7px;
+  background: linear-gradient(145deg, #39a8ff, #70dddc);
+  color: #052a54;
+}
+
+.shell:has(.gwdb-landscape) > aside .brand {
+  gap: 8px;
+  font-size: 16px;
+}
+
+.shell:has(.gwdb-landscape) > aside .brand small {
+  display: none;
+}
+
+.shell:has(.gwdb-landscape) > aside nav button {
+  min-height: 46px;
+  padding: 10px 11px;
+  color: #f2f7ff;
+}
+
+.shell:has(.gwdb-landscape) > aside nav button.active,
+.shell:has(.gwdb-landscape) > aside nav button:hover {
+  background: #0867d4;
+}
+
+.shell:has(.gwdb-landscape) > aside .nav-group > small {
+  color: #72a5d9;
+}
+
+.shell:has(.gwdb-landscape) > main {
+  grid-column: 2;
+  width: auto;
+  max-width: none;
+  min-width: 0;
+  padding: 0;
+}
+
+@media (min-width: 1201px) {
+  .shell:has(.gwdb-landscape) > main {
+    justify-self: stretch;
+    max-width: none;
+  }
+
+  .shell:has(.gwdb-landscape) .gwdb-landscape {
+    width: 100%;
+    max-width: none;
+    box-sizing: border-box;
+  }
+}
+
+/* Route-specific navigation matching the approved landscape composition. */
+.shell:has(.gwdb-landscape) > aside .nav-group:not(:first-child) {
+  display: none;
+}
+
+.shell:has(.gwdb-landscape) > aside .nav-group:first-child {
+  display: flex;
+  flex-direction: column;
+}
+
+.shell:has(.gwdb-landscape) > aside .nav-group:first-child button {
+  font-size: 0;
+  order: 10;
+}
+
+.shell:has(.gwdb-landscape) > aside .nav-group:first-child button::after {
+  font-size: 14px;
+}
+
+.shell:has(.gwdb-landscape) > aside .nav-group:first-child button:nth-child(1) { order: 1; }
+.shell:has(.gwdb-landscape) > aside .nav-group:first-child button:nth-child(1)::after { content: "⌂  Overview"; }
+.shell:has(.gwdb-landscape) > aside .nav-group:first-child button:nth-child(2) { display: none; }
+.shell:has(.gwdb-landscape) > aside .nav-group:first-child button:nth-child(3) { order: 2; }
+.shell:has(.gwdb-landscape) > aside .nav-group:first-child button:nth-child(3)::after { content: "▱  Systems"; }
+.shell:has(.gwdb-landscape) > aside .nav-group:first-child button:nth-child(4) { order: 3; }
+.shell:has(.gwdb-landscape) > aside .nav-group:first-child button:nth-child(4)::after { content: "▦  Applications"; }
+.shell:has(.gwdb-landscape) > aside .nav-group:first-child button:nth-child(5) { order: 4; background: transparent; }
+.shell:has(.gwdb-landscape) > aside .nav-group:first-child button:nth-child(5)::after { content: "▤  Databases"; }
+.shell:has(.gwdb-landscape) > aside .nav-group:first-child button:nth-child(7) { order: 5; }
+.shell:has(.gwdb-landscape) > aside .nav-group:first-child button:nth-child(7)::after { content: "⌘  Integrations"; }
+.shell:has(.gwdb-landscape) > aside .nav-group:first-child button:nth-child(6) { order: 6; background: #0867d4; color: #fff; }
+.shell:has(.gwdb-landscape) > aside .nav-group:first-child button:nth-child(6)::after { content: "☷  Assessments"; }
+.shell:has(.gwdb-landscape) > aside .nav-group:first-child button:nth-child(8) { order: 7; }
+.shell:has(.gwdb-landscape) > aside .nav-group:first-child button:nth-child(8)::after { content: "▥  Reports"; }
+
+.shell:has(.gwdb-landscape) > aside .aside-foot {
+  font-size: 0;
+  display: block;
+}
+
+.shell:has(.gwdb-landscape) > aside .aside-foot > * {
+  display: none;
+}
+
+.shell:has(.gwdb-landscape) > aside .aside-foot::before {
+  content: "ⓘ   Help\A⚙   Settings\A──────────────\A‹   Collapse";
+  white-space: pre;
+  display: block;
+  color: #e9f3ff;
+  font-size: 13px;
+  line-height: 44px;
+}
+
+.shell:has(.gwdb-landscape) > main > .menu-button {
+  display: none;
+}
+
+@media (max-width: 950px) {
+  .shell:has(.gwdb-landscape) {
+    grid-template-columns: 75px minmax(0, 1fr);
+  }
+
+  .shell:has(.gwdb-landscape) > aside {
+    width: 75px;
+  }
+}
